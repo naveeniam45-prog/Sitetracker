@@ -55,8 +55,8 @@ class StatusBadge extends StatelessWidget {
 
     if (color != null) {
       text = color!;
-      bg = color!.withOpacity(0.12);
-      border = color!.withOpacity(0.3);
+      bg = color!.withValues(alpha: 0.12);
+      border = color!.withValues(alpha: 0.3);
     }
 
     return Container(

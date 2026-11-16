@@ -102,16 +102,7 @@ export const WorkerMobileView: React.FC = () => {
       <div className="w-full max-w-md hidden sm:flex items-center justify-between pb-3 text-xs text-slate-400">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="font-semibold text-slate-300">Worker Mobile View Simulator</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewMode('admin')}
-            className="px-3 py-1 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 transition-all font-medium flex items-center gap-1.5"
-          >
-            <Shield className="w-3.5 h-3.5" />
-            <span>Open Admin Dashboard</span>
-          </button>
+          <span className="font-semibold text-slate-300">SiteTrack Worker Check-In App</span>
         </div>
       </div>
 

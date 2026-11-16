@@ -179,30 +179,6 @@ export const LoginPage: React.FC = () => {
                 </div>
                 <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
               </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin')}
-                className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-indigo-600/15 border border-slate-700/60 hover:border-indigo-500/50 transition-all flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
-                    AD
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-white group-hover:text-indigo-300 flex items-center gap-1.5">
-                      Admin Portal
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-normal">
-                        Full Operations
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-400">
-                      Sites, Workers, Tools & Daily Attendance
-                    </div>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
-              </button>
             </div>
           </div>
         </div>
