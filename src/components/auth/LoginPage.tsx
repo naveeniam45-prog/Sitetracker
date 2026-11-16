@@ -1,0 +1,228 @@
+import React, { useState } from 'react';
+import { useApp } from '../../context/AppContext';
+import { 
+  HardHat, Shield, Lock, User as UserIcon, Eye, EyeOff, 
+  ArrowRight, CheckCircle2, Building2, Wrench, Sparkles 
+} from 'lucide-react';
+
+export const LoginPage: React.FC = () => {
+  const { login } = useApp();
+  const [username, setUsername] = useState('EMP001'); // prefill with Raj Kumar for instant satisfaction
+  const [password, setPassword] = useState('password123');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    setTimeout(() => {
+      const success = login(username);
+      if (!success) {
+        setError('Invalid username or password. Try EMP001 (Worker) or admin.');
+      }
+      setIsLoading(false);
+    }, 400);
+  };
+
+  const handleQuickLogin = (userLogin: string) => {
+    setUsername(userLogin);
+    setPassword('password123');
+    login(userLogin);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-navy-900 to-slate-950 flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8">
+      {/* Background glowing accents */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-emerald-600/15 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Brand Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center gap-3 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-white/15 shadow-xl mb-4">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+              <HardHat className="w-5 h-5 text-white" />
+            </div>
+            <div className="text-left">
+              <span className="text-xl font-bold tracking-tight text-white block leading-none">
+                SiteTrack
+              </span>
+              <span className="text-[9px] uppercase tracking-widest text-blue-300 font-semibold">
+                TOOLS. PEOPLE. PROGRESS.
+              </span>
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-white tracking-tight sm:text-3xl">
+            Welcome to SiteTrack
+          </h1>
+          <p className="text-sm text-slate-400 mt-1.5">
+            Worksite, Attendance & Tool Management Platform
+          </p>
+        </div>
+
+        {/* Login Card */}
+        <div className="bg-slate-800/90 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-6 sm:p-8 shadow-2xl">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 text-xs bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-lg flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                Username / Employee ID
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <UserIcon className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="e.g. EMP001 or admin"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-medium text-slate-300">
+                  Password
+                </label>
+                <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Demo password is: password123'); }} className="text-xs text-blue-400 hover:text-blue-300">
+                  Forgot password?
+                </a>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-11 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-400">
+                <input type="checkbox" defaultChecked className="rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-0" />
+                <span>Keep me signed in</span>
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full mt-2 py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl text-sm transition-all shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 group disabled:opacity-50"
+            >
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Quick Demo Logins Section */}
+          <div className="mt-6 pt-5 border-t border-slate-700/60">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>One-Click Demo Logins</span>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('EMP001')}
+                className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-blue-600/15 border border-slate-700/60 hover:border-blue-500/50 transition-all flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                    RK
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white group-hover:text-blue-300 flex items-center gap-1.5">
+                      Raj Kumar
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-normal">
+                        Worker Check-In/Out
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      Operator • ID: EMP001 • Kochi Project
+                    </div>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('admin')}
+                className="w-full text-left p-3 rounded-xl bg-slate-900/60 hover:bg-indigo-600/15 border border-slate-700/60 hover:border-indigo-500/50 transition-all flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
+                    AD
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white group-hover:text-indigo-300 flex items-center gap-1.5">
+                      Admin Portal
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-normal">
+                        Full Operations
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      Sites, Workers, Tools & Daily Attendance
+                    </div>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature Highlights Footer */}
+        <div className="mt-6 grid grid-cols-3 gap-2 text-center text-[11px] text-slate-400">
+          <div className="flex items-center justify-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>GPS Verification</span>
+          </div>
+          <div className="flex items-center justify-center gap-1">
+            <Building2 className="w-3.5 h-3.5 text-blue-400" />
+            <span>Multi-Site Hub</span>
+          </div>
+          <div className="flex items-center justify-center gap-1">
+            <Wrench className="w-3.5 h-3.5 text-amber-400" />
+            <span>Tool QR Audits</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
