@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../features/auth/services/auth_service.dart';
 import '../models/user_model.dart';
 import '../models/site_model.dart';
 import '../models/worker_model.dart';
@@ -403,6 +404,20 @@ class AppStateProvider extends ChangeNotifier {
   List<HandoverModel> get handoverRequests => _handoverRequests;
 
   // AUTH ACTIONS
+  final AuthService _authService = AuthService();
+
+  Future<AuthResult> loginWithApi(String username, String password) async {
+    final result = await _authService.login(
+      username: username,
+      password: password,
+    );
+    if (result.isSuccess && result.user != null) {
+      _currentUser = result.user;
+      notifyListeners();
+    }
+    return result;
+  }
+
   bool login(String usernameOrId) {
     final query = usernameOrId.trim().toLowerCase();
     
