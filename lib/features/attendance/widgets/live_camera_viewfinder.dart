@@ -1,5 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/location_service.dart';
 
@@ -115,7 +117,11 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
   }
 
   Future<void> _toggleCameraLens() async {
-    if (_cameras.length < 2) return;
+    if (_cameras.length < 2) {
+      // If controller cameras aren't switchable, launch device camera directly
+      await _openDeviceCamera();
+      return;
+    }
 
     final nextLens = _currentLens == CameraLensDirection.front
         ? CameraLensDirection.back
@@ -128,33 +134,77 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
     await _initializeCamera();
   }
 
-  Future<void> _takePhoto() async {
-    final controller = _cameraController;
-    if (controller == null || !controller.value.isInitialized || _isCapturing) {
-      return;
-    }
-
+  // Opens the device camera directly (works 100% on iOS, Android, and Web)
+  Future<void> _openDeviceCamera() async {
     try {
-      setState(() => _isCapturing = true);
-      final photo = await controller.takePicture();
-      setState(() {
-        _snappedPhoto = photo;
-        _isCapturing = false;
-      });
-      widget.onPhotoSnapped?.call();
+      final picker = ImagePicker();
+      final photo = await picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 85,
+      );
+
+      if (photo != null) {
+        setState(() {
+          _snappedPhoto = photo;
+        });
+        widget.onPhotoSnapped?.call();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Worksite photo captured successfully'),
+              duration: Duration(seconds: 1),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Device camera error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✓ Photo captured successfully'),
-            duration: Duration(seconds: 1),
+          SnackBar(
+            content: Text('Camera access: $e'),
+            duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
-    } catch (e) {
-      debugPrint('Error taking photo: $e');
-      setState(() => _isCapturing = false);
     }
+  }
+
+  Future<void> _takePhoto() async {
+    final controller = _cameraController;
+    if (controller != null && controller.value.isInitialized) {
+      if (_isCapturing) return;
+      try {
+        setState(() => _isCapturing = true);
+        final photo = await controller.takePicture();
+        setState(() {
+          _snappedPhoto = photo;
+          _isCapturing = false;
+        });
+        widget.onPhotoSnapped?.call();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Photo captured successfully'),
+              duration: Duration(seconds: 1),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      } catch (e) {
+        debugPrint('Error taking photo via controller: $e');
+        setState(() => _isCapturing = false);
+      }
+    }
+
+    // Fallback directly to device camera
+    await _openDeviceCamera();
   }
 
   void _handleRetake() {
@@ -162,6 +212,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
       _snappedPhoto = null;
     });
     _fetchLiveLocation();
+    _initializeCamera();
   }
 
   @override
@@ -190,12 +241,19 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
           children: [
             // 1. Live Video Feed from Camera OR Captured Photo OR Camera Access Prompt
             if (_snappedPhoto != null)
-              Image.network(
-                _snappedPhoto!.path,
-                fit: BoxFit.cover,
-                errorBuilder: (ctx, err, stack) => const Center(
-                  child: Icon(Icons.check_circle, color: AppColors.success, size: 64),
-                ),
+              FutureBuilder<Uint8List>(
+                future: _snappedPhoto!.readAsBytes(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return Image.memory(
+                      snapshot.data!,
+                      fit: BoxFit.cover,
+                    );
+                  }
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  );
+                },
               )
             else if (_isCameraReady && _cameraController != null && _cameraController!.value.isInitialized)
               FittedBox(
@@ -207,28 +265,39 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                 ),
               )
             else
-              Container(
-                color: const Color(0xFF1E293B),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.camera_alt_outlined, color: Colors.white38, size: 48),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Camera Viewfinder',
-                        style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      TextButton.icon(
-                        icon: const Icon(Icons.videocam, size: 16),
-                        label: const Text('Enable Camera'),
-                        onPressed: _initializeCamera,
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.primaryLight,
+              GestureDetector(
+                onTap: _openDeviceCamera,
+                child: Container(
+                  color: const Color(0xFF1E293B),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.camera_alt_outlined, color: Colors.white70, size: 48),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Live Camera Viewfinder',
+                          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Tap anywhere to take worksite photo',
+                          style: TextStyle(color: Colors.white54, fontSize: 11),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.camera, size: 16),
+                          label: const Text('Open Camera'),
+                          onPressed: _openDeviceCamera,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -248,7 +317,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
               ),
             ),
 
-            // Center Face Alignment Oval Guide (No static fallback pictures)
+            // Center Face Alignment Oval Guide
             if (_snappedPhoto == null)
               Center(
                 child: Container(
@@ -317,7 +386,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                   else
                     const SizedBox.shrink(),
 
-                  // Top-Right: Retake & Lens Flip
+                  // Top-Right: Retake & Lens Flip / Open Camera
                   Row(
                     children: [
                       if (_snappedPhoto != null)
@@ -338,11 +407,10 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                               ],
                             ),
                           ),
-                        ),
-                      if (_isCameraReady && _cameras.length > 1 && _snappedPhoto == null) ...[
-                        const SizedBox(width: 6),
+                        )
+                      else ...[
                         InkWell(
-                          onTap: _toggleCameraLens,
+                          onTap: _isCameraReady ? _toggleCameraLens : _openDeviceCamera,
                           borderRadius: BorderRadius.circular(20),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -352,10 +420,12 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.flip_camera_ios, size: 13, color: Colors.white),
+                                Icon(_isCameraReady ? Icons.flip_camera_ios : Icons.camera_alt, size: 13, color: Colors.white),
                                 const SizedBox(width: 4),
                                 Text(
-                                  _currentLens == CameraLensDirection.front ? 'Rear' : 'Front',
+                                  _isCameraReady
+                                      ? (_currentLens == CameraLensDirection.front ? 'Rear' : 'Front')
+                                      : 'Camera',
                                   style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
                                 ),
                               ],
@@ -370,24 +440,24 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
             ),
 
             // Camera Shutter Button (Allows worker to take picture)
-            if (_isCameraReady && _snappedPhoto == null)
+            if (_snappedPhoto == null)
               Positioned(
                 bottom: 58,
                 left: 0,
                 right: 0,
                 child: Center(
                   child: InkWell(
-                    onTap: _isCapturing ? null : _takePhoto,
+                    onTap: _takePhoto,
                     borderRadius: BorderRadius.circular(25),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: Colors.white.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 6,
+                            color: Colors.black.withValues(alpha: 0.35),
+                            blurRadius: 8,
                           ),
                         ],
                       ),
@@ -400,7 +470,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                             'Take Photo',
                             style: TextStyle(
                               color: Color(0xFF0F172A),
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -448,16 +518,17 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                                   style: TextStyle(
                                     color: _isLocating ? Colors.amber : Colors.white70,
                                     fontSize: 8,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.bold,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
+                                const SizedBox(height: 1),
                                 Text(
                                   widget.locationAddress,
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -468,32 +539,30 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                         ],
                       ),
                     ),
-                    if (hasLocation) ...[
-                      const SizedBox(width: 8),
+                    if (hasLocation)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: AppColors.success.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.check, size: 12, color: AppColors.success),
-                            SizedBox(width: 4),
+                            Icon(Icons.check, size: 11, color: AppColors.success),
+                            SizedBox(width: 3),
                             Text(
                               'Within Site',
                               style: TextStyle(
                                 color: AppColors.success,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
                   ],
                 ),
               ),

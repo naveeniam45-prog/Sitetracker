@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, RefreshCw, FlipHorizontal, Check, MapPin } from 'lucide-react';
+import { Camera, RefreshCw, FlipHorizontal, Check, MapPin, AlertCircle } from 'lucide-react';
 
 interface CameraCaptureProps {
   onCapture: (dataUrl: string) => void;
@@ -22,10 +22,12 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(false);
 
   // Stop current active media stream tracks
   const stopStream = useCallback(() => {
@@ -35,7 +37,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     }
   }, [stream]);
 
-  // Request real camera access
+  // Request real camera access with robust fallbacks
   const startCamera = useCallback(async () => {
     if (capturedImage) return;
     setIsInitializing(true);
@@ -48,30 +50,51 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const s = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: facingMode,
-            width: { ideal: 720 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        });
-        setStream(s);
-        if (videoRef.current) {
-          videoRef.current.srcObject = s;
-          videoRef.current.play().catch(() => {});
+        let s: MediaStream | null = null;
+        try {
+          s = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: facingMode },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+            audio: false,
+          });
+        } catch (constraintErr) {
+          console.warn('Ideal constraints failed, attempting basic video:', constraintErr);
+          s = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
         }
+
+        setStream(s);
+        setCameraError(null);
       } else {
-        setCameraError('Camera API is not supported by your browser.');
+        setCameraError('Browser blocked camera access or camera API is unsupported.');
       }
     } catch (err: any) {
       console.warn('Camera access unavailable:', err);
-      setCameraError('Camera access required. Please allow camera permissions.');
+      const msg = err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError'
+        ? 'Camera permission was denied. Tap "Open Device Camera" below.'
+        : 'Unable to access camera feed. Tap "Open Device Camera" below.';
+      setCameraError(msg);
     } finally {
       setIsInitializing(false);
     }
   }, [facingMode, capturedImage, stream]);
 
+  // Attach stream to video element whenever stream changes or video element mounts
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch((err) => {
+        console.warn('Autoplay failed, awaiting user interaction:', err);
+      });
+    }
+  }, [stream]);
+
+  // Start camera on mount or lens toggle
   useEffect(() => {
     startCamera();
     return () => {
@@ -79,8 +102,31 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     };
   }, [facingMode]);
 
+  // Native device camera file input fallback (works 100% on iOS Safari and Android Chrome)
+  const handleOpenDeviceCamera = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    fileInputRef.current?.click();
+  };
+
+  const handleFileCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        onCapture(dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   // Clean snapshot from live video or canvas
-  const takeSnapshot = () => {
+  const takeSnapshot = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+
     if (videoRef.current && canvasRef.current && stream && !cameraError) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -99,94 +145,99 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       }
     }
 
-    // Direct canvas fallback if camera permission was denied in browser
-    const canvas = canvasRef.current || document.createElement('canvas');
-    canvas.width = 600;
-    canvas.height = 600;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      const grad = ctx.createLinearGradient(0, 0, 0, 600);
-      grad.addColorStop(0, '#0f172a');
-      grad.addColorStop(1, '#1e293b');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 600, 600);
-
-      // Worksite verified badge
-      ctx.strokeStyle = '#2563eb';
-      ctx.lineWidth = 6;
-      ctx.strokeRect(30, 30, 540, 540);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 24px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('WORKSITE ATTENDANCE PHOTO', 300, 270);
-
-      ctx.fillStyle = '#10b981';
-      ctx.font = 'bold 18px Inter, sans-serif';
-      ctx.fillText(`LOCATION: ${siteName.toUpperCase()}`, 300, 310);
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '14px Inter, sans-serif';
-      ctx.fillText(`TIME: ${new Date().toLocaleTimeString()}`, 300, 345);
-
-      const fallbackUrl = canvas.toDataURL('image/jpeg', 0.9);
-      onCapture(fallbackUrl);
-    }
+    // If stream is not active, trigger device camera directly
+    handleOpenDeviceCamera();
   };
 
-  const toggleCamera = () => {
+  const toggleCamera = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
   };
 
   const showLocationPill = isWithinSite && isLocationOn;
 
   return (
-    <div className="relative w-full aspect-[4/4.5] sm:aspect-[4/4.2] rounded-3xl overflow-hidden bg-slate-950 border-2 border-slate-700 shadow-2xl flex flex-col justify-between">
+    <div 
+      onClick={() => {
+        if (!stream || cameraError) {
+          startCamera();
+        }
+      }}
+      className="relative w-full aspect-[4/4.5] sm:aspect-[4/4.2] rounded-3xl overflow-hidden bg-slate-950 border-2 border-slate-700 shadow-2xl flex flex-col justify-between cursor-pointer select-none"
+    >
       {/* Hidden processing canvas */}
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Main View Area: Captured photo or Live Video Stream */}
-      {capturedImage ? (
+      {/* Hidden native camera capture input for 100% reliable mobile capture */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        onChange={handleFileCapture}
+        className="hidden"
+      />
+
+      {/* Video Element (ALWAYS mounted in DOM so ref and srcObject bind seamlessly) */}
+      <video
+        ref={videoRef}
+        playsInline
+        autoPlay
+        muted
+        className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-300 ${
+          stream && !cameraError && !capturedImage ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        } ${facingMode === 'user' ? '-scale-x-100' : ''}`}
+      />
+
+      {/* Captured Image View */}
+      {capturedImage && (
         <img
           src={capturedImage}
           alt="Worksite captured photo"
-          className="absolute inset-0 w-full h-full object-cover z-0"
+          className="absolute inset-0 w-full h-full object-cover z-10"
         />
-      ) : stream && !cameraError ? (
-        <video
-          ref={videoRef}
-          playsInline
-          autoPlay
-          muted
-          className={`absolute inset-0 w-full h-full object-cover z-0 ${
-            facingMode === 'user' ? '-scale-x-100' : ''
-          }`}
-        />
-      ) : (
-        /* Clean Camera Standby View (No Stock Photos) */
+      )}
+
+      {/* Clean Camera Standby / Permission View (When stream is inactive and no photo captured) */}
+      {!stream && !capturedImage && (
         <div className="absolute inset-0 z-0 bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
           <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-blue-400 mb-3 shadow-inner">
             <Camera className="w-8 h-8" />
           </div>
-          <p className="text-sm font-bold text-white mb-1">
-            {cameraError ? 'Camera Access Required' : 'Live Camera Viewfinder'}
-          </p>
+          <h3 className="text-sm font-bold text-white mb-1">
+            {cameraError ? 'Camera Permission Required' : 'Live Camera Viewfinder'}
+          </h3>
           <p className="text-xs text-slate-400 max-w-xs mb-4">
-            {cameraError || 'Allow camera permission to capture live worksite photo'}
+            {cameraError || 'Tap anywhere or click below to open your camera.'}
           </p>
-          <button
-            type="button"
-            onClick={startCamera}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5"
-          >
-            <Camera className="w-3.5 h-3.5" />
-            <span>{cameraError ? 'Retry Camera' : 'Enable Camera'}</span>
-          </button>
+
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                startCamera();
+              }}
+              disabled={isInitializing}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>{isInitializing ? 'Opening Camera...' : 'Open Live Camera'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOpenDeviceCamera}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+            >
+              <span>Use Device Camera</span>
+            </button>
+          </div>
         </div>
       )}
 
       {/* Top Camera Controls Overlay */}
-      <div className="relative z-20 p-4 flex items-center justify-between">
+      <div className="relative z-20 p-4 flex items-center justify-between pointer-events-auto">
         {/* Top-Left: Show Location Pill ONLY when Location is On; otherwise NOTHING */}
         {showLocationPill ? (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-semibold backdrop-blur-md shadow-xs">
@@ -202,8 +253,11 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
           {capturedImage ? (
             <button
               type="button"
-              onClick={onRetake}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-md text-xs font-semibold transition-all border border-white/20 active:scale-95"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRetake();
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-md text-xs font-semibold transition-all border border-white/20 active:scale-95 shadow-md"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>Retake</span>
@@ -214,7 +268,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
                 type="button"
                 onClick={takeSnapshot}
                 title="Capture Photo"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white backdrop-blur-md text-xs font-semibold transition-all shadow-md active:scale-95"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white backdrop-blur-md text-xs font-semibold transition-all shadow-md active:scale-95"
               >
                 <Camera className="w-3.5 h-3.5" />
                 <span>Snap</span>
@@ -224,7 +278,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
                 type="button"
                 onClick={toggleCamera}
                 title="Switch Camera"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white backdrop-blur-md text-xs font-semibold transition-all border border-white/15 active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white backdrop-blur-md text-xs font-semibold transition-all border border-white/15 active:scale-95 shadow-md"
               >
                 <FlipHorizontal className="w-3.5 h-3.5" />
                 <span>Flip</span>
@@ -247,21 +301,21 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       )}
 
       {/* Circular Camera Shutter Button Overlay */}
-      {!capturedImage && stream && (
-        <div className="relative z-20 pb-2 flex justify-center items-center">
+      {!capturedImage && (
+        <div className="relative z-20 pb-2 flex justify-center items-center pointer-events-auto">
           <button
             type="button"
             onClick={takeSnapshot}
-            className="w-14 h-14 rounded-full border-4 border-white/80 bg-white/20 hover:bg-white/40 active:scale-90 flex items-center justify-center transition-all shadow-xl backdrop-blur-xs"
+            className="w-14 h-14 rounded-full border-4 border-white/80 bg-white/20 hover:bg-white/40 active:scale-90 flex items-center justify-center transition-all shadow-2xl backdrop-blur-xs group"
             title="Take photo"
           >
-            <div className="w-10 h-10 rounded-full bg-white shadow-md"></div>
+            <div className="w-10 h-10 rounded-full bg-white group-hover:scale-95 transition-transform shadow-md"></div>
           </button>
         </div>
       )}
 
       {/* Bottom Worksite Location Banner (Clean, No Coordinates) */}
-      <div className="relative z-20 p-4 pt-1">
+      <div className="relative z-20 p-4 pt-1 pointer-events-auto">
         <div className="bg-black/75 backdrop-blur-md border border-white/15 rounded-2xl p-3 flex items-center justify-between text-white shadow-xl">
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
@@ -280,7 +334,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
           </div>
 
           {showLocationPill && (
-            <div className="flex items-center gap-1 bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-full text-[11px] font-semibold shrink-0 border border-emerald-500/40">
+            <div className="flex items-center gap-1 bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0 border border-emerald-500/40">
               <Check className="w-3.5 h-3.5" />
               <span>Within Site</span>
             </div>
