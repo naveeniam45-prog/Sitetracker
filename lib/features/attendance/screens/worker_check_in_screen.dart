@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/routing/route_names.dart';
+import '../../../core/widgets/sitetrack_logo.dart';
 import '../../../shared/providers/app_state_provider.dart';
+import '../widgets/live_camera_viewfinder.dart';
 
 class WorkerCheckInScreen extends StatefulWidget {
   const WorkerCheckInScreen({super.key});
@@ -15,32 +17,15 @@ class WorkerCheckInScreen extends StatefulWidget {
 
 class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
   late String _selectedSiteId;
-  bool _cameraFront = true;
-  int _photoIndex = 0;
   Timer? _timer;
-  int _activeScreenIndex = 0; // 0: Check In Screen, 1: Check Out Screen
-
-  final List<String> _simulatedWorksitePhotos = [
-    'https://images.unsplash.com/photo-1541888946425-d0fbb186f5f7?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80',
-  ];
 
   @override
   void initState() {
     super.initState();
     final provider = context.read<AppStateProvider>();
     _selectedSiteId = provider.currentUser?.siteId ?? provider.sites.first.id;
-    final workerId = provider.currentUser?.id ?? 'worker-1';
-    final todayAttendance = provider.getTodayAttendance(workerId);
-    
-    // Auto-select Check Out screen if worker already checked in today and has not checked out
-    if (todayAttendance != null && todayAttendance.checkInTime != null && todayAttendance.checkOutTime == null) {
-      _activeScreenIndex = 1;
-    } else {
-      _activeScreenIndex = 0;
-    }
 
+    // Real-time ticking clock every second for live button timestamps
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
@@ -56,13 +41,13 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
     final provider = context.read<AppStateProvider>();
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.navy800,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         return Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,10 +57,14 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                 children: [
                   const Text(
                     'Select Work Site',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white54),
+                    icon: const Icon(Icons.close, color: Color(0xFF64748B)),
                     onPressed: () => Navigator.pop(ctx),
                   ),
                 ],
@@ -88,14 +77,29 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primary : Colors.white10,
+                      color: isSelected ? AppColors.primaryBg : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.location_on, color: Colors.white, size: 18),
+                    child: Icon(
+                      Icons.location_on,
+                      color: isSelected ? AppColors.primary : const Color(0xFF64748B),
+                      size: 20,
+                    ),
                   ),
-                  title: Text(site.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: Text(site.location, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                  trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.primaryLight) : null,
+                  title: Text(
+                    site.name,
+                    style: TextStyle(
+                      color: const Color(0xFF0F172A),
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    site.location,
+                    style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(Icons.check_circle, color: AppColors.primary)
+                      : null,
                   onTap: () {
                     setState(() {
                       _selectedSiteId = site.id;
@@ -120,17 +124,24 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.navy800,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(7),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, size: 18, color: iconColor),
           ),
@@ -143,17 +154,17 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                 Text(
                   label,
                   style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 10,
+                    color: Color(0xFF64748B),
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
+                    letterSpacing: 0.2,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Color(0xFF0F172A),
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -181,6 +192,7 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
       orElse: () => provider.sites.first,
     );
 
+    // Natural Check-In / Check-Out single sequential flow
     final todayAttendance = provider.getTodayAttendance(workerId);
     final isCheckedIn = todayAttendance != null && 
         todayAttendance.checkInTime != null && 
@@ -188,53 +200,38 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
     final isCheckedOut = todayAttendance != null && todayAttendance.checkOutTime != null;
 
     final currentTimeStr = DateFormat('hh:mm a').format(DateTime.now());
-    final isCheckInTab = _activeScreenIndex == 0;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isMobile = screenWidth < 500;
 
     return Scaffold(
-      backgroundColor: AppColors.navy950,
+      backgroundColor: const Color(0xFFF8FAFC), // Modern Light Slate App Background (matching PDF Page 6)
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 440),
             child: Column(
               children: [
-                // Top App Header: Logo + Worker Profile + Logout
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                // Top App Header: PDF Logo + Sign Out Button
+                Container(
+                  color: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 16 : 20,
+                    vertical: 12,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.engineering, color: Colors.white, size: 18),
-                          ),
-                          const SizedBox(width: 8),
-                          const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'SiteTrack',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
-                              ),
-                              Text(
-                                'TOOLS. PEOPLE. PROGRESS.',
-                                style: TextStyle(color: AppColors.primaryLight, fontSize: 8, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ],
+                      // SiteTrack Logo with 3 pillars matching PDF Page 6
+                      SiteTrackLogo(
+                        size: isMobile ? 32 : 36,
+                        isDark: false,
+                        showTagline: true,
                       ),
 
-                      // Sign Out button back to login
+                      // Sign Out button
                       IconButton(
                         tooltip: 'Sign Out',
-                        icon: const Icon(Icons.logout, color: Colors.white54, size: 20),
+                        icon: const Icon(Icons.logout_rounded, color: Color(0xFF64748B), size: 22),
                         onPressed: () {
                           provider.logout();
                           Navigator.pushReplacementNamed(context, RouteNames.login);
@@ -244,128 +241,16 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                   ),
                 ),
 
-                const Divider(color: Colors.white10, height: 1),
+                const Divider(color: Color(0xFFE2E8F0), height: 1),
 
-                // Screen Selector Tabs: Check In Screen VS Check Out Screen (Page 6 of PDF)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppColors.navy800,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white10),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _activeScreenIndex = 0;
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 9),
-                              decoration: BoxDecoration(
-                                color: isCheckInTab ? AppColors.primary : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: isCheckInTab
-                                    ? [
-                                        BoxShadow(
-                                          color: AppColors.primary.withValues(alpha: 0.35),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        )
-                                      ]
-                                    : null,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.login_rounded,
-                                    size: 15,
-                                    color: isCheckInTab ? Colors.white : Colors.white60,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Check In Screen',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: isCheckInTab ? Colors.white : Colors.white60,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _activeScreenIndex = 1;
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 9),
-                              decoration: BoxDecoration(
-                                color: !isCheckInTab ? AppColors.primary : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: !isCheckInTab
-                                    ? [
-                                        BoxShadow(
-                                          color: AppColors.primary.withValues(alpha: 0.35),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        )
-                                      ]
-                                    : null,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.logout_rounded,
-                                    size: 15,
-                                    color: !isCheckInTab ? Colors.white : Colors.white60,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Check Out Screen',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: !isCheckInTab ? Colors.white : Colors.white60,
-                                    ),
-                                  ),
-                                  if (isCheckedIn) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.success,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Main Check In / Check Out Area (Page 6 of PDF)
+                // Main Attendance Area
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 16 : 20,
+                      vertical: 14,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -377,33 +262,57 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  isCheckInTab ? 'Good Morning,' : 'Good Evening,',
-                                  style: const TextStyle(fontSize: 14, color: Colors.white70),
+                                  isCheckedIn ? 'Good Evening,' : 'Good Morning,',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF64748B),
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                                 Text(
                                   workerName,
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
+                                  ),
                                 ),
                                 Text(
                                   workerRole.toUpperCase(),
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primaryLight),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
                               ],
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: AppColors.navy800,
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white10),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x050F172A),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
                               ),
                               child: const Row(
                                 children: [
-                                  Icon(Icons.calendar_today, size: 13, color: AppColors.primaryLight),
+                                  Icon(Icons.calendar_today_rounded, size: 13, color: AppColors.primary),
                                   SizedBox(width: 6),
                                   Text(
                                     '14 Sep 2026 Monday',
-                                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      color: Color(0xFF0F172A),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -411,25 +320,32 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                           ],
                         ),
 
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
 
                         // Selected Worksite Card
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: AppColors.navy800,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white10),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x060F172A),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Row(
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: AppColors.primaryBg,
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Icon(Icons.location_on, color: AppColors.primaryLight, size: 20),
+                                child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 20),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -438,11 +354,18 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                                   children: [
                                     Text(
                                       site.name,
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                      style: const TextStyle(
+                                        color: Color(0xFF0F172A),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                     Text(
                                       site.location,
-                                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                      style: const TextStyle(
+                                        color: Color(0xFF64748B),
+                                        fontSize: 11,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -457,8 +380,15 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                                 ),
                                 child: const Row(
                                   children: [
-                                    Text('Change Site', style: TextStyle(color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.bold)),
-                                    Icon(Icons.chevron_right, size: 14, color: AppColors.primaryLight),
+                                    Text(
+                                      'Change Site',
+                                      style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    Icon(Icons.chevron_right, size: 14, color: AppColors.primary),
                                   ],
                                 ),
                               ),
@@ -466,270 +396,70 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                           ),
                         ),
 
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
 
-                        // LIVE WORKSITE PHOTOGRAPH VIEWFINDER (Page 6 Mockup)
-                        Container(
-                          height: 280,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.black,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: Colors.white12, width: 2),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(22),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                // Camera feed / worksite photo
-                                Image.network(
-                                  _simulatedWorksitePhotos[_photoIndex % _simulatedWorksitePhotos.length],
-                                  fit: BoxFit.cover,
-                                ),
-
-                                // Gradient vignette
-                                Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Colors.black.withValues(alpha: 0.5),
-                                        Colors.transparent,
-                                        Colors.black.withValues(alpha: 0.8),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-
-                                // Center Alignment Guide & Worker Face
-                                Center(
-                                  child: Container(
-                                    width: 140,
-                                    height: 140,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: AppColors.success,
-                                        width: 2.5,
-                                      ),
-                                    ),
-                                    child: ClipOval(
-                                      child: Image.network(
-                                        user?.avatarUrl ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80',
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Top Camera Controls: Retake & Switch
-                                Positioned(
-                                  top: 12,
-                                  left: 12,
-                                  right: 12,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black54,
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: const Row(
-                                          children: [
-                                            CircleAvatar(radius: 3, backgroundColor: AppColors.danger),
-                                            SizedBox(width: 5),
-                                            Text('LIVE CAMERA', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                                          ],
-                                        ),
-                                      ),
-                                      Row(
-                                        children: [
-                                          InkWell(
-                                            onTap: () {
-                                              setState(() {
-                                                _photoIndex++;
-                                              });
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('Photo preview refreshed')),
-                                              );
-                                            },
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white24,
-                                                borderRadius: BorderRadius.circular(20),
-                                              ),
-                                              child: const Row(
-                                                children: [
-                                                  Icon(Icons.refresh, size: 12, color: Colors.white),
-                                                  SizedBox(width: 4),
-                                                  Text('Retake', style: TextStyle(color: Colors.white, fontSize: 11)),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          InkWell(
-                                            onTap: () {
-                                              setState(() {
-                                                _cameraFront = !_cameraFront;
-                                                _photoIndex++;
-                                              });
-                                            },
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white24,
-                                                borderRadius: BorderRadius.circular(20),
-                                              ),
-                                              child: Row(
-                                                children: [
-                                                  const Icon(Icons.flip_camera_ios, size: 12, color: Colors.white),
-                                                  const SizedBox(width: 4),
-                                                  Text(_cameraFront ? 'Rear' : 'Front', style: const TextStyle(color: Colors.white, fontSize: 11)),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                                // Bottom Location Detected Banner Pill
-                                Positioned(
-                                  bottom: 12,
-                                  left: 12,
-                                  right: 12,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.85),
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(color: Colors.white12),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Row(
-                                            children: [
-                                              const CircleAvatar(radius: 3, backgroundColor: AppColors.success),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    const Text(
-                                                      'LOCATION DETECTED',
-                                                      style: TextStyle(color: Colors.white54, fontSize: 8, fontWeight: FontWeight.bold),
-                                                    ),
-                                                    Text(
-                                                      site.location,
-                                                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.success.withValues(alpha: 0.2),
-                                            borderRadius: BorderRadius.circular(20),
-                                            border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
-                                          ),
-                                          child: const Row(
-                                            children: [
-                                              Icon(Icons.check, size: 12, color: AppColors.success),
-                                              SizedBox(width: 4),
-                                              Text(
-                                                'Within Site',
-                                                style: TextStyle(color: AppColors.success, fontSize: 10, fontWeight: FontWeight.bold),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        // REAL LIVE CAMERA VIEWFINDER (With device camera access, location detected HUD)
+                        LiveCameraViewfinder(
+                          locationAddress: site.location,
+                          fallbackPhotoUrl: user?.avatarUrl ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80',
                         ),
 
                         const SizedBox(height: 14),
 
-                        // ==========================================
-                        // DUAL METRIC CARDS (Exact same for Check In & Check Out)
-                        // ==========================================
+                        // DUAL METRIC CARDS (Exact match for both Check In & Check Out)
                         Row(
                           children: [
                             Expanded(
                               child: _buildMetricCard(
-                                icon: isCheckInTab ? Icons.login_rounded : Icons.check_circle_rounded,
+                                icon: isCheckedIn ? Icons.check_circle_rounded : Icons.login_rounded,
                                 iconColor: AppColors.success,
                                 label: 'Check In',
-                                value: isCheckInTab
-                                    ? (todayAttendance?.checkInTime ?? '08:15 AM')
-                                    : (todayAttendance?.checkInTime ?? '08:15 AM'),
+                                value: isCheckedIn
+                                    ? (todayAttendance.checkInTime ?? '08:15 AM')
+                                    : '08:15 AM',
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: _buildMetricCard(
                                 icon: Icons.schedule_rounded,
-                                iconColor: AppColors.primaryLight,
+                                iconColor: AppColors.primary,
                                 label: 'Total Hours',
-                                value: isCheckInTab ? '9h 50m' : (todayAttendance?.workingHours ?? '9h 50m'),
+                                value: isCheckedIn
+                                    ? (todayAttendance.workingHours ?? '9h 50m')
+                                    : '9h 50m',
                               ),
                             ),
                           ],
                         ),
 
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
 
-                        // ==========================================
-                        // ACTION BUTTON AREA (Page 6 Mockup)
-                        // ==========================================
-                        if (isCheckInTab) ...[
-                          // CHECK IN BUTTON (Green pill button with arrow)
+                        // SINGLE UNIFIED WORKFLOW: CHECK IN -> NEXT IS CHECK OUT ONLY
+                        if (!isCheckedIn && !isCheckedOut) ...[
+                          // STATE 1: CHECK IN
                           SizedBox(
                             width: double.infinity,
-                            height: 58,
+                            height: 56,
                             child: ElevatedButton(
                               onPressed: () {
                                 provider.checkInWorker(
                                   workerId: workerId,
                                   siteId: site.id,
                                 );
-                                setState(() {
-                                  _activeScreenIndex = 1; // Transition to Check Out screen
-                                });
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('✓ Checked In successfully at ${site.name}'),
-                                    backgroundColor: AppColors.success,
+                                    backgroundColor: const Color(0xFF16A34A),
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.success,
+                                backgroundColor: const Color(0xFF16A34A), // Vibrant Emerald Green
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                                elevation: 6,
+                                elevation: 4,
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -764,124 +494,137 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                           const Center(
                             child: Text(
                               'Live worksite photograph and GPS will be verified automatically',
-                              style: TextStyle(color: Colors.white38, fontSize: 11),
+                              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ] else if (isCheckedIn) ...[
+                          // STATE 2: CHECK OUT ONLY (Immediately follows Check In)
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                provider.checkOutWorker(todayAttendance.id);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('✓ Checked Out successfully. Shift recorded.'),
+                                    backgroundColor: Color(0xFFDC2626),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFDC2626), // Vibrant Red
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                elevation: 4,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white24,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.arrow_forward_rounded, size: 20),
+                                  ),
+                                  Row(
+                                    children: [
+                                      const Text(
+                                        'Check Out',
+                                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        currentTimeStr,
+                                        style: const TextStyle(fontSize: 13, color: Colors.white70),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(width: 24),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Center(
+                            child: Text(
+                              'Captures shift end photo & logs working hours to attendance records',
+                              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
                               textAlign: TextAlign.center,
                             ),
                           ),
                         ] else ...[
-                          // CHECK OUT BUTTON / COMPLETED SUMMARY
-                          if (isCheckedOut) ...[
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: AppColors.navy800,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
-                              ),
-                              child: Column(
-                                children: [
-                                  const Icon(Icons.verified, color: AppColors.success, size: 36),
-                                  const SizedBox(height: 6),
-                                  const Text(
-                                    'Shift Completed Today',
-                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Check-In: ${todayAttendance.checkInTime} • Check-Out: ${todayAttendance.checkOutTime}',
-                                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Total Working Hours: ${todayAttendance.workingHours ?? "9h 50m"}',
-                                    style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 13),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  OutlinedButton.icon(
-                                    icon: const Icon(Icons.refresh, size: 16),
-                                    onPressed: () {
-                                      provider.resetWorkerAttendance(workerId);
-                                      setState(() {
-                                        _activeScreenIndex = 0;
-                                      });
-                                    },
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppColors.primaryLight,
-                                      side: const BorderSide(color: AppColors.primaryLight),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                    ),
-                                    label: const Text('Reset Attendance (Demo Again)'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ] else ...[
-                            // CHECK OUT BUTTON (Red pill button with arrow)
-                            SizedBox(
-                              width: double.infinity,
-                              height: 58,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  if (todayAttendance != null) {
-                                    provider.checkOutWorker(todayAttendance.id);
-                                  } else {
-                                    provider.checkInWorker(workerId: workerId, siteId: site.id);
-                                    final att = provider.getTodayAttendance(workerId);
-                                    if (att != null) provider.checkOutWorker(att.id);
-                                  }
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('✓ Checked Out successfully. Shift hours recorded.'),
-                                      backgroundColor: AppColors.danger,
-                                      behavior: SnackBarBehavior.floating,
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.danger,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                                  elevation: 6,
+                          // STATE 3: SHIFT COMPLETED TODAY
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(color: const Color(0xFF86EFAC)),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x0A0F172A),
+                                  blurRadius: 10,
+                                  offset: Offset(0, 3),
                                 ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white24,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(Icons.arrow_forward_rounded, size: 20),
-                                    ),
-                                    Row(
-                                      children: [
-                                        const Text(
-                                          'Check Out',
-                                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          currentTimeStr,
-                                          style: const TextStyle(fontSize: 13, color: Colors.white70),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(width: 24),
-                                  ],
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFDCFCE7),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 26),
                                 ),
-                              ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Shift Completed Today',
+                                  style: TextStyle(
+                                    color: Color(0xFF0F172A),
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Check-In: ${todayAttendance.checkInTime} • Check-Out: ${todayAttendance.checkOutTime}',
+                                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Total Working Hours: ${todayAttendance.workingHours ?? "9h 50m"}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF16A34A),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                OutlinedButton.icon(
+                                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                                  onPressed: () {
+                                    provider.resetWorkerAttendance(workerId);
+                                  },
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primary,
+                                    side: const BorderSide(color: AppColors.primary),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                  ),
+                                  label: const Text('Start Next Shift / Demo Again'),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            const Center(
-                              child: Text(
-                                'Captures shift end photo & logs working hours to attendance records',
-                                style: TextStyle(color: Colors.white38, fontSize: 11),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
+                          ),
                         ],
                         const SizedBox(height: 16),
                       ],
