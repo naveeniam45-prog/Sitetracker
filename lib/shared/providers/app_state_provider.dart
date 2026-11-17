@@ -9,6 +9,20 @@ import '../models/attendance_model.dart';
 import '../models/handover_model.dart';
 
 class AppStateProvider extends ChangeNotifier {
+  // Global Theme Mode (Dark / Light)
+  bool _isDarkMode = true;
+  bool get isDarkMode => _isDarkMode;
+
+  void setDarkMode(bool value) {
+    _isDarkMode = value;
+    notifyListeners();
+  }
+
+  void toggleTheme() {
+    _isDarkMode = !_isDarkMode;
+    notifyListeners();
+  }
+
   // Current Logged-in User
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
