@@ -360,44 +360,8 @@ class AppStateProvider extends ChangeNotifier {
   ];
   List<ToolModel> get tools => _tools;
 
-  // Attendance records (from Page 6 of PDF)
-  List<AttendanceModel> _attendanceRecords = [
-    const AttendanceModel(
-      id: 'att-1-prev',
-      workerId: 'worker-1',
-      workerName: 'Raj Kumar',
-      workerAvatar: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=150&auto=format&fit=crop&q=80',
-      employeeId: 'EMP001',
-      siteId: 'site-1',
-      siteName: 'Kochi Project',
-      date: '13 Sep 2026',
-      checkInTime: '08:15 AM',
-      checkOutTime: '06:05 PM',
-      workingHours: '9h 50m',
-      status: 'Present',
-      locationVerified: true,
-      latitude: 10.0159,
-      longitude: 76.3638,
-      checkInPhoto: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80',
-    ),
-    const AttendanceModel(
-      id: 'att-2',
-      workerId: 'worker-2',
-      workerName: 'Suresh P',
-      workerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      employeeId: 'EMP002',
-      siteId: 'site-1',
-      siteName: 'Kochi Project',
-      date: '14 Sep 2026',
-      checkInTime: '09:12 AM',
-      workingHours: 'In Progress (7h 35m)',
-      status: 'Working',
-      locationVerified: true,
-      latitude: 10.0162,
-      longitude: 76.3640,
-      checkInPhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
-    ),
-  ];
+  // Attendance records (tracked in real-time)
+  List<AttendanceModel> _attendanceRecords = [];
   List<AttendanceModel> get attendanceRecords => _attendanceRecords;
 
   // Tool Handover Requests (Page 2 & 5 of PDF)
@@ -474,11 +438,11 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // WORKER ATTENDANCE ACTIONS (Check-In & Check-Out)
+  // WORKER ATTENDANCE ACTIONS (Check-In & Check-Out with Exact Timestamps)
   AttendanceModel? getTodayAttendance(String workerId) {
     try {
       return _attendanceRecords.firstWhere(
-        (a) => a.workerId == workerId && a.date == '14 Sep 2026',
+        (a) => a.workerId == workerId,
       );
     } catch (_) {
       return null;
@@ -492,19 +456,22 @@ class AppStateProvider extends ChangeNotifier {
   }) {
     final worker = _workers.firstWhere((w) => w.id == workerId, orElse: () => _workers[0]);
     final site = _sites.firstWhere((s) => s.id == siteId, orElse: () => _sites[0]);
-    final timeStr = DateFormat('hh:mm a').format(DateTime.now());
+    final now = DateTime.now();
+    final timeStr = DateFormat('hh:mm a').format(now);
+    final dateStr = DateFormat('dd MMM yyyy').format(now);
 
     final newRecord = AttendanceModel(
-      id: 'att-${DateTime.now().millisecondsSinceEpoch}',
+      id: 'att-${now.millisecondsSinceEpoch}',
       workerId: workerId,
       workerName: worker.name,
       workerAvatar: worker.avatarUrl,
       employeeId: worker.employeeId,
       siteId: siteId,
       siteName: site.name,
-      date: '14 Sep 2026',
+      date: dateStr,
+      checkInTimestamp: now,
       checkInTime: timeStr,
-      workingHours: 'In Progress (0h 01m)',
+      workingHours: '0h 00m',
       status: 'Working',
       checkInPhoto: photoUrl ?? worker.avatarUrl,
       locationVerified: true,
@@ -512,17 +479,29 @@ class AppStateProvider extends ChangeNotifier {
       longitude: site.longitude,
     );
 
-    _attendanceRecords = [newRecord, ..._attendanceRecords];
+    // Remove any previous today record for this worker
+    _attendanceRecords = [newRecord, ..._attendanceRecords.where((a) => a.workerId != workerId)];
     notifyListeners();
   }
 
   void checkOutWorker(String attendanceId) {
-    final timeStr = DateFormat('hh:mm a').format(DateTime.now());
+    final now = DateTime.now();
+    final timeStr = DateFormat('hh:mm a').format(now);
     _attendanceRecords = _attendanceRecords.map((a) {
       if (a.id == attendanceId) {
+        final start = a.checkInTimestamp ?? now;
+        final diff = now.difference(start);
+        final hours = diff.inHours;
+        final minutes = diff.inMinutes % 60;
+        final seconds = diff.inSeconds % 60;
+        final durationStr = hours > 0
+            ? '${hours}h ${minutes.toString().padLeft(2, '0')}m'
+            : (minutes > 0 ? '${minutes}m ${seconds.toString().padLeft(2, '0')}s' : '${seconds}s');
+
         return a.copyWith(
+          checkOutTimestamp: now,
           checkOutTime: timeStr,
-          workingHours: '9h 50m',
+          workingHours: durationStr,
           status: 'Present',
         );
       }
@@ -532,7 +511,7 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   void resetWorkerAttendance(String workerId) {
-    _attendanceRecords = _attendanceRecords.where((a) => !(a.workerId == workerId && a.date == '14 Sep 2026')).toList();
+    _attendanceRecords = _attendanceRecords.where((a) => a.workerId != workerId).toList();
     notifyListeners();
   }
 

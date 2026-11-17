@@ -64,20 +64,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Login page is styled in sleek dark mode by default; toggle effect is shown after login
+    final provider = context.watch<AppStateProvider>();
+    final isDarkMode = provider.isDarkMode;
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isMobile = screenWidth < 500;
 
-    // Dark theme for login page
-    const bgColor = Color(0xFF0A0F1D);
-    const cardBgColor = Color(0xFF1E293B);
-    final cardBorderColor = _isCardHovered 
-        ? AppColors.primaryLight.withValues(alpha: 0.6) 
-        : Colors.white.withValues(alpha: 0.12);
-    const textColor = Colors.white;
-    const textSecondaryColor = Color(0xFF94A3B8);
-    const fieldBgColor = Color(0xFF0F172A);
-    final fieldBorderColor = Colors.white.withValues(alpha: 0.12);
+    // Theme dynamically matches user preference (White theme if logged out from light mode, Dark if from dark mode)
+    final bgColor = isDarkMode ? const Color(0xFF0A0F1D) : const Color(0xFFF1F5F9);
+    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+    final cardBorderColor = isDarkMode
+        ? (_isCardHovered ? AppColors.primaryLight.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.12))
+        : (_isCardHovered ? AppColors.primaryLight.withValues(alpha: 0.6) : const Color(0xFFE2E8F0));
+    final textColor = isDarkMode ? Colors.white : const Color(0xFF0F172A);
+    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final fieldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final fieldBorderColor = isDarkMode ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -105,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Center(
                       child: SiteTrackLogo(
                         size: isMobile ? 38 : 44,
-                        isDark: true,
+                        isDark: isDarkMode,
                         showTagline: false, // REMOVED tools, people, progress tagline
                       ),
                     ),
@@ -150,7 +151,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: _isCardHovered ? 0.55 : 0.35),
+                              color: isDarkMode
+                                  ? Colors.black.withValues(alpha: _isCardHovered ? 0.55 : 0.35)
+                                  : const Color(0x100F172A),
                               blurRadius: _isCardHovered ? 28 : 16,
                               offset: Offset(0, _isCardHovered ? 12 : 6),
                             ),
@@ -182,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           _errorMessage!,
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: Colors.white,
+                                            color: isDarkMode ? Colors.white : const Color(0xFF991B1B),
                                             height: 1.3,
                                           ),
                                         ),
@@ -216,7 +219,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 decoration: InputDecoration(
                                   hintText: 'e.g. EMP001',
                                   hintStyle: TextStyle(
-                                    color: Colors.white30,
+                                    color: isDarkMode ? Colors.white30 : const Color(0xFF94A3B8),
                                     fontSize: 13,
                                   ),
                                   prefixIcon: Icon(
@@ -270,7 +273,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 decoration: InputDecoration(
                                   hintText: '••••••••',
                                   hintStyle: TextStyle(
-                                    color: Colors.white30,
+                                    color: isDarkMode ? Colors.white30 : const Color(0xFF94A3B8),
                                     fontSize: 13,
                                   ),
                                   prefixIcon: Icon(
@@ -336,8 +339,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                             value: _rememberMe,
                                             activeColor: AppColors.primary,
                                             checkColor: Colors.white,
-                                            side: const BorderSide(
-                                              color: Colors.white38,
+                                            side: BorderSide(
+                                              color: isDarkMode ? Colors.white38 : const Color(0xFF94A3B8),
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.circular(4),
@@ -350,10 +353,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        const Text(
+                                        Text(
                                           'Remember me',
                                           style: TextStyle(
-                                            color: Colors.white70,
+                                            color: isDarkMode ? Colors.white70 : const Color(0xFF475569),
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
                                           ),
@@ -377,10 +380,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                       minimumSize: Size.zero,
                                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                     ),
-                                    child: const Text(
+                                    child: Text(
                                       'Forgot password?',
                                       style: TextStyle(
-                                        color: AppColors.primaryLight,
+                                        color: isDarkMode ? AppColors.primaryLight : AppColors.primary,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                       ),

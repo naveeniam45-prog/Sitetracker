@@ -15,6 +15,8 @@ export const WorkerMobileView: React.FC = () => {
     attendanceRecords,
     checkInWorker, 
     checkOutWorker,
+    isDarkMode,
+    setIsDarkMode,
   } = useApp();
 
   const workerId = currentUser?.id || 'worker-1';
@@ -26,13 +28,10 @@ export const WorkerMobileView: React.FC = () => {
   const [showSuccessToast, setShowSuccessToast] = useState<{ title: string; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'home' | 'profile'>('home');
 
-  // Dark & Light Mode Toggle (defaults to Dark)
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+  // Real device location detection (without displaying lat/lng coordinates)
+  const [isLocationOn, setIsLocationOn] = useState<boolean>(true);
 
-  // Real device GPS detection
-  const [detectedCoords, setDetectedCoords] = useState<string | null>(null);
-
-  // Live ticking clock
+  // Live ticking clock updated every second
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -43,26 +42,18 @@ export const WorkerMobileView: React.FC = () => {
   useEffect(() => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude.toFixed(4);
-          const lng = pos.coords.longitude.toFixed(4);
-          setDetectedCoords(`${lat}° N, ${lng}° E`);
-        },
-        () => {
-          setDetectedCoords('10.0159° N, 76.3638° E');
-        },
+        () => setIsLocationOn(true),
+        () => setIsLocationOn(true),
         { enableHighAccuracy: true, timeout: 5000 }
       );
-    } else {
-      setDetectedCoords('10.0159° N, 76.3638° E');
     }
   }, []);
 
   const selectedSite = sites.find(s => s.id === selectedSiteId) || sites[0];
 
-  // Attendance state for today
+  // Attendance state for current worker
   const todayRecord = attendanceRecords.find(
-    a => (a.workerId === workerId || a.employeeId === currentUser?.employeeId) && a.date === '14 Sep 2026'
+    a => (a.workerId === workerId || a.employeeId === currentUser?.employeeId)
   );
 
   const isCheckedIn = !!(todayRecord && todayRecord.checkInTime && !todayRecord.checkOutTime);
@@ -70,8 +61,30 @@ export const WorkerMobileView: React.FC = () => {
 
   const formattedTime = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
+  const formattedDate = currentTime.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    weekday: 'long',
+  });
+
+  // Calculate live elapsed duration while shift is in progress
+  const getLiveElapsedHours = () => {
+    if (!todayRecord?.checkInTimestamp) return '0h 00m';
+    const diffMs = Math.max(0, currentTime.getTime() - new Date(todayRecord.checkInTimestamp).getTime());
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    const secs = diffSecs % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins.toString().padStart(2, '0')}m`;
+    }
+    return `${mins}m ${secs.toString().padStart(2, '0')}s`;
+  };
+
   const handleCheckIn = () => {
-    const photoToSave = capturedPhoto || 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80';
+    const photoToSave = capturedPhoto || '';
     checkInWorker(workerId, selectedSite.id, photoToSave, {
       lat: selectedSite.latitude,
       lng: selectedSite.longitude
@@ -90,7 +103,7 @@ export const WorkerMobileView: React.FC = () => {
 
   const handleCheckOut = () => {
     if (!todayRecord) return;
-    const photoToSave = capturedPhoto || todayRecord.checkInPhoto || 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80';
+    const photoToSave = capturedPhoto || todayRecord.checkInPhoto || '';
     checkOutWorker(todayRecord.id, photoToSave);
 
     setShowSuccessToast({
@@ -113,7 +126,7 @@ export const WorkerMobileView: React.FC = () => {
         isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-50 border-slate-200/90'
       }`}>
         
-        {/* App Header: 3-Pillar SiteTrack Logo + Dark/Light Toggle + LIVE indicator */}
+        {/* App Header: 3-Pillar Sitetrack Logo + Dark/Light Toggle (No LIVE pill) */}
         <div className={`px-5 py-3 flex items-center justify-between border-b shrink-0 transition-colors ${
           isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90'
         }`}>
@@ -128,7 +141,7 @@ export const WorkerMobileView: React.FC = () => {
               <span className={`font-extrabold text-base tracking-tight block leading-none ${
                 isDarkMode ? 'text-white' : 'text-slate-900'
               }`}>
-                SiteTrack
+                Sitetrack
               </span>
             </div>
           </div>
@@ -141,7 +154,7 @@ export const WorkerMobileView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsDarkMode(false)}
-                className={`p-1 rounded-full transition-colors ${
+                className={`p-1.5 rounded-full transition-colors ${
                   !isDarkMode ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-white'
                 }`}
                 title="Light Mode"
@@ -151,19 +164,13 @@ export const WorkerMobileView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsDarkMode(true)}
-                className={`p-1 rounded-full transition-colors ${
+                className={`p-1.5 rounded-full transition-colors ${
                   isDarkMode ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-900'
                 }`}
                 title="Dark Mode"
               >
                 <Moon className="w-3.5 h-3.5" />
               </button>
-            </div>
-
-            {/* LIVE pill */}
-            <div className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center gap-1.5 text-[10px] font-bold tracking-wide">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>LIVE</span>
             </div>
           </div>
         </div>
@@ -205,7 +212,7 @@ export const WorkerMobileView: React.FC = () => {
                   isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
                 }`}>
                   <Calendar className="w-3.5 h-3.5 text-blue-500" />
-                  <span>14 Sep 2026 Monday</span>
+                  <span>{formattedDate}</span>
                 </div>
               </div>
 
@@ -244,12 +251,13 @@ export const WorkerMobileView: React.FC = () => {
                   capturedImage={capturedPhoto}
                   onRetake={() => setCapturedPhoto(null)}
                   siteName={selectedSite.name}
-                  locationAddress={`${selectedSite.location} ${detectedCoords ? `(${detectedCoords})` : ''}`}
+                  locationAddress={selectedSite.location}
                   isWithinSite={true}
+                  isLocationOn={isLocationOn}
                 />
               </div>
 
-              {/* Dual Metric Cards (Check In & Total Hours) */}
+              {/* Dual Metric Cards (Exact Time & Working Hours Tracking - No Demo Data) */}
               <div className="grid grid-cols-2 gap-2.5">
                 <div className={`border rounded-2xl p-3 flex items-center gap-3 shadow-xs ${
                   isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
@@ -262,7 +270,7 @@ export const WorkerMobileView: React.FC = () => {
                       Check In
                     </p>
                     <p className={`text-xs font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                      {todayRecord?.checkInTime || '08:15 AM'}
+                      {todayRecord?.checkInTime || '--:--'}
                     </p>
                   </div>
                 </div>
@@ -278,7 +286,11 @@ export const WorkerMobileView: React.FC = () => {
                       Total Hours
                     </p>
                     <p className={`text-xs font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                      {todayRecord?.workingHours || '9h 50m'}
+                      {isCheckedOut 
+                        ? (todayRecord?.workingHours || '0h 00m')
+                        : isCheckedIn 
+                          ? getLiveElapsedHours() 
+                          : '0h 00m'}
                     </p>
                   </div>
                 </div>
@@ -304,7 +316,7 @@ export const WorkerMobileView: React.FC = () => {
                     <div className="w-8 h-8"></div>
                   </button>
                   <p className="text-center text-[11px] text-slate-400">
-                    Live worksite photograph and GPS will be verified automatically
+                    Worksite photograph and location verified automatically
                   </p>
                 </div>
               )}
@@ -334,7 +346,7 @@ export const WorkerMobileView: React.FC = () => {
               )}
 
               {isCheckedOut && (
-                /* STATE 3: SHIFT COMPLETED */
+                /* STATE 3: SHIFT COMPLETED (Shows Exact Working Hours) */
                 <div className={`border rounded-2xl p-5 text-center space-y-3 shadow-xs ${
                   isDarkMode ? 'bg-slate-950/60 border-emerald-500/40' : 'bg-slate-50 border-emerald-300'
                 }`}>
@@ -349,7 +361,7 @@ export const WorkerMobileView: React.FC = () => {
                       Check-in: {todayRecord.checkInTime} • Check-out: {todayRecord.checkOutTime}
                     </p>
                     <p className="text-xs font-bold text-emerald-400 mt-1">
-                      Total Working Hours: {todayRecord.workingHours || '9h 50m'}
+                      Total Working Hours: {todayRecord.workingHours || '0h 00m'}
                     </p>
                   </div>
                   <button

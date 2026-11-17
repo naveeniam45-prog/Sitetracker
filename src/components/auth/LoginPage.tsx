@@ -5,16 +5,13 @@ import {
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { login } = useApp();
+  const { login, isDarkMode } = useApp();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  
-  // Login page is always in sleek dark mode; toggle effect is shown after login
-  const isDarkMode = true;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +33,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8">
+    <div className={`min-h-screen ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-900'} flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 transition-colors duration-200`}>
       <div className="w-full max-w-md relative z-10">
 
         {/* OUTSIDE THE BOX: SITETRACK BRAND & APP HEADING */}
@@ -51,7 +48,7 @@ export const LoginPage: React.FC = () => {
             <span className={`text-2xl font-extrabold tracking-tight block leading-none ${
               isDarkMode ? 'text-white' : 'text-slate-900'
             }`}>
-              SiteTrack
+              Sitetrack
             </span>
           </div>
           <p className={`text-xs font-semibold tracking-wide ${

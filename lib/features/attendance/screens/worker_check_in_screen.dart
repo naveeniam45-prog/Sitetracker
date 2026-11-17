@@ -121,6 +121,24 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
     );
   }
 
+  String _calculateLiveHours(dynamic attendance) {
+    if (attendance == null || attendance.checkInTimestamp == null) {
+      return '0h 00m';
+    }
+    final DateTime checkIn = attendance.checkInTimestamp as DateTime;
+    final diff = DateTime.now().difference(checkIn);
+    final hours = diff.inHours;
+    final minutes = diff.inMinutes % 60;
+    final seconds = diff.inSeconds % 60;
+    if (hours > 0) {
+      return '${hours}h ${minutes.toString().padLeft(2, '0')}m';
+    } else if (minutes > 0) {
+      return '${minutes}m ${seconds.toString().padLeft(2, '0')}s';
+    } else {
+      return '${seconds}s';
+    }
+  }
+
   Widget _buildMetricCard({
     required IconData icon,
     required Color iconColor,
@@ -367,27 +385,26 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
 
           const SizedBox(height: 14),
 
-          // REAL LIVE CAMERA VIEWFINDER (Live video + Live GPS location detection)
+          // REAL LIVE CAMERA VIEWFINDER (Live camera access + location verification)
           LiveCameraViewfinder(
             locationAddress: site.location,
             siteLat: site.latitude ?? 10.0159,
             siteLng: site.longitude ?? 76.3638,
-            fallbackPhotoUrl: user?.avatarUrl ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80',
           ),
 
           const SizedBox(height: 14),
 
-          // DUAL METRIC CARDS (Check In & Total Hours)
+          // DUAL METRIC CARDS (Exact Real-Time Tracking - No Demo Hardcoding)
           Row(
             children: [
               Expanded(
                 child: _buildMetricCard(
                   icon: isCheckedIn ? Icons.check_circle_rounded : Icons.login_rounded,
-                  iconColor: AppColors.success,
+                  iconColor: isCheckedIn ? AppColors.success : AppColors.primaryLight,
                   label: 'Check In',
-                  value: isCheckedIn
-                      ? (todayAttendance.checkInTime ?? '08:15 AM')
-                      : '08:15 AM',
+                  value: (isCheckedIn || isCheckedOut)
+                      ? (todayAttendance?.checkInTime ?? '--:--')
+                      : '--:--',
                   isDarkMode: isDarkMode,
                 ),
               ),
@@ -395,11 +412,13 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
               Expanded(
                 child: _buildMetricCard(
                   icon: Icons.schedule_rounded,
-                  iconColor: AppColors.primaryLight,
+                  iconColor: isCheckedIn ? AppColors.success : AppColors.primaryLight,
                   label: 'Total Hours',
-                  value: isCheckedIn
-                      ? (todayAttendance.workingHours ?? '9h 50m')
-                      : '9h 50m',
+                  value: isCheckedOut
+                      ? (todayAttendance?.workingHours ?? '0h 00m')
+                      : (isCheckedIn
+                          ? _calculateLiveHours(todayAttendance)
+                          : '0h 00m'),
                   isDarkMode: isDarkMode,
                 ),
               ),
@@ -567,7 +586,7 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Total Working Hours: ${todayAttendance.workingHours ?? "9h 50m"}',
+                    'Total Working Hours: ${todayAttendance.workingHours ?? "0h 00m"}',
                     style: const TextStyle(
                       color: Color(0xFF16A34A),
                       fontWeight: FontWeight.bold,
@@ -937,41 +956,6 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                                         size: 13,
                                         color: isDarkMode ? Colors.white : Colors.black54,
                                       ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(width: 8),
-
-                            // Online / Live indicator pill
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF16A34A).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.3)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF16A34A),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Text(
-                                    'LIVE',
-                                    style: TextStyle(
-                                      color: Color(0xFF16A34A),
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.5,
                                     ),
                                   ),
                                 ],

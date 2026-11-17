@@ -7,6 +7,8 @@ class AttendanceModel {
   final String siteId;
   final String siteName;
   final String date;
+  final DateTime? checkInTimestamp;
+  final DateTime? checkOutTimestamp;
   final String? checkInTime;
   final String? checkOutTime;
   final String? workingHours;
@@ -26,6 +28,8 @@ class AttendanceModel {
     required this.siteId,
     required this.siteName,
     required this.date,
+    this.checkInTimestamp,
+    this.checkOutTimestamp,
     this.checkInTime,
     this.checkOutTime,
     this.workingHours,
@@ -38,6 +42,8 @@ class AttendanceModel {
   });
 
   AttendanceModel copyWith({
+    DateTime? checkInTimestamp,
+    DateTime? checkOutTimestamp,
     String? checkInTime,
     String? checkOutTime,
     String? workingHours,
@@ -55,6 +61,8 @@ class AttendanceModel {
       siteId: siteId,
       siteName: siteName,
       date: date,
+      checkInTimestamp: checkInTimestamp ?? this.checkInTimestamp,
+      checkOutTimestamp: checkOutTimestamp ?? this.checkOutTimestamp,
       checkInTime: checkInTime ?? this.checkInTime,
       checkOutTime: checkOutTime ?? this.checkOutTime,
       workingHours: workingHours ?? this.workingHours,

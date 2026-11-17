@@ -23,6 +23,11 @@ interface AppContextType {
   viewMode: 'admin' | 'worker-mobile';
   setViewMode: (mode: 'admin' | 'worker-mobile') => void;
 
+  // Dark mode theme
+  isDarkMode: boolean;
+  setIsDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
+  toggleTheme: () => void;
+
   // Sites
   sites: Site[];
   addSite: (site: Omit<Site, 'id'>) => void;
@@ -76,6 +81,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedToolId, setSelectedToolId] = useState<string | null>('tool-1'); // Default to GM-001
   const [viewMode, setViewMode] = useState<'admin' | 'worker-mobile'>('admin');
 
+  // Dark & Light Mode Theme with LocalStorage Persistence
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('sitetrack_dark_mode');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sitetrack_dark_mode', String(isDarkMode));
+  }, [isDarkMode]);
+
+  const toggleTheme = () => {
+    setIsDarkMode(prev => !prev);
+  };
+
   const [sites, setSites] = useState<Site[]>(() => {
     const saved = localStorage.getItem('sitetrack_sites');
     return saved ? JSON.parse(saved) : INITIAL_SITES;
@@ -93,7 +112,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(() => {
     const saved = localStorage.getItem('sitetrack_attendance');
-    return saved ? JSON.parse(saved) : INITIAL_ATTENDANCE;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Only keep records with authentic checkInTimestamp, filter out legacy static demo records
+        return Array.isArray(parsed) ? parsed.filter((r: AttendanceRecord) => r.checkInTimestamp) : [];
+      } catch {
+        return [];
+      }
+    }
+    return INITIAL_ATTENDANCE;
   });
 
   const [handoverRequests, setHandoverRequests] = useState<HandoverRequest[]>(() => {
@@ -359,7 +387,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const getWorkerTodayAttendance = (workerId: string): AttendanceRecord | undefined => {
-    return attendanceRecords.find(a => a.workerId === workerId && a.date === '14 Sep 2026');
+    return attendanceRecords.find(a => a.workerId === workerId);
   };
 
   const checkInWorker = (
@@ -372,13 +400,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const site = sites.find(s => s.id === siteId);
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const todayDateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
     // Check if existing record
-    const existing = attendanceRecords.find(a => a.workerId === workerId && a.date === '14 Sep 2026');
+    const existing = attendanceRecords.find(a => (a.workerId === workerId || a.employeeId === worker?.employeeId) && !a.checkOutTime);
     if (existing) {
       const updated: AttendanceRecord = {
         ...existing,
         checkInTime: existing.checkInTime || timeStr,
+        checkInTimestamp: existing.checkInTimestamp || now.toISOString(),
         status: 'Working',
         checkInPhoto: photoDataUrl || existing.checkInPhoto,
         locationVerified: true,
@@ -397,9 +427,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       employeeId: worker ? worker.employeeId : 'EMP001',
       siteId: siteId,
       siteName: site ? site.name : 'Kochi Project',
-      date: '14 Sep 2026',
+      date: todayDateStr,
       checkInTime: timeStr,
-      workingHours: 'In Progress (0h 01m)',
+      checkInTimestamp: now.toISOString(),
+      workingHours: '0h 00m',
       status: 'Working',
       checkInPhoto: photoDataUrl,
       locationVerified: true,
@@ -415,7 +446,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Update site count
     if (site) {
-      setSites(prev => prev.map(s => s.id === siteId ? { ...s, workersPresent: s.workersPresent + 1 } : s));
+      setSites(prev => prev.map(s => s.id === siteId ? { ...s, workersPresent: (s.workersPresent || 0) + 1 } : s));
     }
 
     // Add recent activity
@@ -434,12 +465,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
+    let exactWorkingHours = '0h 00m';
+
     setAttendanceRecords(prev => prev.map(a => {
       if (a.id === recordId) {
+        const checkInDate = a.checkInTimestamp ? new Date(a.checkInTimestamp) : now;
+        const diffMs = Math.max(0, now.getTime() - checkInDate.getTime());
+        const diffSecs = Math.floor(diffMs / 1000);
+        const diffMins = Math.floor(diffSecs / 60);
+        const hours = Math.floor(diffMins / 60);
+        const mins = diffMins % 60;
+        const secs = diffSecs % 60;
+        exactWorkingHours = hours > 0 
+          ? `${hours}h ${mins.toString().padStart(2, '0')}m`
+          : `${mins}m ${secs.toString().padStart(2, '0')}s`;
+
         return {
           ...a,
           checkOutTime: timeStr,
-          workingHours: '9h 14m',
+          checkOutTimestamp: now.toISOString(),
+          workingHours: exactWorkingHours,
           status: 'Present',
           checkOutPhoto: photoDataUrl || a.checkOutPhoto
         };
@@ -452,7 +497,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setRecentActivities(prev => [{
         id: `act-${Date.now()}`,
         title: `${targetRecord.workerName} checked out from ${targetRecord.siteName}`,
-        description: `Completed 9h 14m shift with checkout photo`,
+        description: `Completed shift (${exactWorkingHours}) with checkout photo`,
         time: `Today, ${timeStr}`,
         type: 'checkout'
       }, ...prev]);
@@ -509,6 +554,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSelectedToolId,
       viewMode,
       setViewMode,
+      isDarkMode,
+      setIsDarkMode,
+      toggleTheme,
       sites,
       addSite,
       updateSite,

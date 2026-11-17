@@ -7,7 +7,6 @@ class LiveCameraViewfinder extends StatefulWidget {
   final String locationAddress;
   final double siteLat;
   final double siteLng;
-  final String? fallbackPhotoUrl;
   final VoidCallback? onPhotoSnapped;
 
   const LiveCameraViewfinder({
@@ -15,7 +14,6 @@ class LiveCameraViewfinder extends StatefulWidget {
     required this.locationAddress,
     this.siteLat = 10.0159,
     this.siteLng = 76.3638,
-    this.fallbackPhotoUrl,
     this.onPhotoSnapped,
   });
 
@@ -28,17 +26,12 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
   CameraController? _cameraController;
   bool _isCameraReady = false;
   CameraLensDirection _currentLens = CameraLensDirection.front;
-  int _simulatedPhotoIndex = 0;
+  XFile? _snappedPhoto;
+  bool _isCapturing = false;
 
   // Real GPS State
   LocationResult? _locationResult;
   bool _isLocating = true;
-
-  final List<String> _simulatedPhotos = const [
-    'https://images.unsplash.com/photo-1541888946425-d0fbb186f5f7?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80',
-  ];
 
   @override
   void initState() {
@@ -122,12 +115,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
   }
 
   Future<void> _toggleCameraLens() async {
-    if (_cameras.length < 2) {
-      setState(() {
-        _simulatedPhotoIndex++;
-      });
-      return;
-    }
+    if (_cameras.length < 2) return;
 
     final nextLens = _currentLens == CameraLensDirection.front
         ? CameraLensDirection.back
@@ -140,27 +128,51 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
     await _initializeCamera();
   }
 
+  Future<void> _takePhoto() async {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized || _isCapturing) {
+      return;
+    }
+
+    try {
+      setState(() => _isCapturing = true);
+      final photo = await controller.takePicture();
+      setState(() {
+        _snappedPhoto = photo;
+        _isCapturing = false;
+      });
+      widget.onPhotoSnapped?.call();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Photo captured successfully'),
+            duration: Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error taking photo: $e');
+      setState(() => _isCapturing = false);
+    }
+  }
+
   void _handleRetake() {
     setState(() {
-      _simulatedPhotoIndex++;
+      _snappedPhoto = null;
     });
     _fetchLiveLocation();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Camera view & GPS location refreshed'),
-        duration: Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasLocation = _locationResult != null && _locationResult!.isWithinSite;
+
     return Container(
       height: 290,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.black,
+        color: const Color(0xFF0F172A),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white12, width: 1.5),
         boxShadow: [
@@ -176,8 +188,16 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Live Video Feed from Camera OR Fallback simulated worksite
-            if (_isCameraReady && _cameraController != null && _cameraController!.value.isInitialized)
+            // 1. Live Video Feed from Camera OR Captured Photo OR Camera Access Prompt
+            if (_snappedPhoto != null)
+              Image.network(
+                _snappedPhoto!.path,
+                fit: BoxFit.cover,
+                errorBuilder: (ctx, err, stack) => const Center(
+                  child: Icon(Icons.check_circle, color: AppColors.success, size: 64),
+                ),
+              )
+            else if (_isCameraReady && _cameraController != null && _cameraController!.value.isInitialized)
               FittedBox(
                 fit: BoxFit.cover,
                 child: SizedBox(
@@ -187,13 +207,28 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                 ),
               )
             else
-              Image.network(
-                _simulatedPhotos[_simulatedPhotoIndex % _simulatedPhotos.length],
-                fit: BoxFit.cover,
-                errorBuilder: (ctx, err, stack) => Container(
-                  color: const Color(0xFF1E293B),
-                  child: const Center(
-                    child: Icon(Icons.videocam_off, color: Colors.white38, size: 48),
+              Container(
+                color: const Color(0xFF1E293B),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.camera_alt_outlined, color: Colors.white38, size: 48),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Camera Viewfinder',
+                        style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      TextButton.icon(
+                        icon: const Icon(Icons.videocam, size: 16),
+                        label: const Text('Enable Camera'),
+                        onPressed: _initializeCamera,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primaryLight,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -205,54 +240,47 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.5),
+                    Colors.black.withValues(alpha: 0.4),
                     Colors.transparent,
-                    Colors.black.withValues(alpha: 0.8),
+                    Colors.black.withValues(alpha: 0.75),
                   ],
                 ),
               ),
             ),
 
-            // Center Face Alignment Oval / Guide
-            Center(
-              child: Container(
-                width: 142,
-                height: 142,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.success,
-                    width: 2.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.success.withValues(alpha: 0.3),
-                      blurRadius: 14,
-                      spreadRadius: 2,
+            // Center Face Alignment Oval Guide (No static fallback pictures)
+            if (_snappedPhoto == null)
+              Center(
+                child: Container(
+                  width: 142,
+                  height: 142,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _isCameraReady ? AppColors.success : Colors.white30,
+                      width: 2.5,
                     ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: widget.fallbackPhotoUrl != null
-                      ? Image.network(
-                          widget.fallbackPhotoUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (ctx, err, stack) => const Icon(
-                            Icons.person,
-                            size: 70,
-                            color: Colors.white70,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.person,
-                          size: 70,
-                          color: Colors.white70,
-                        ),
+                    boxShadow: _isCameraReady
+                        ? [
+                            BoxShadow(
+                              color: AppColors.success.withValues(alpha: 0.3),
+                              blurRadius: 14,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.person_outline_rounded,
+                      size: 64,
+                      color: Colors.white54,
+                    ),
+                  ),
                 ),
               ),
-            ),
 
-            // Top HUD Bar: LIVE badge + Retake & Flip buttons
+            // Top HUD Bar: Location on top-left (only when location is on) & Lens Flip / Retake on top-right
             Positioned(
               top: 12,
               left: 12,
@@ -260,87 +288,130 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: AppColors.danger,
-                            shape: BoxShape.circle,
+                  // Top-Left: Shown ONLY when location is ON / verified (no LIVE pill)
+                  if (hasLocation)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.success.withValues(alpha: 0.5)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.location_on, size: 13, color: AppColors.success),
+                          SizedBox(width: 4),
+                          Text(
+                            'Within Site',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    const SizedBox.shrink(),
+
+                  // Top-Right: Retake & Lens Flip
+                  Row(
+                    children: [
+                      if (_snappedPhoto != null)
+                        InkWell(
+                          onTap: _handleRetake,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.refresh, size: 13, color: Colors.white),
+                                SizedBox(width: 4),
+                                Text('Retake', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
                           ),
                         ),
+                      if (_isCameraReady && _cameras.length > 1 && _snappedPhoto == null) ...[
                         const SizedBox(width: 6),
-                        Text(
-                          _isCameraReady ? 'LIVE CAMERA' : 'CAMERA ACTIVE',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
+                        InkWell(
+                          onTap: _toggleCameraLens,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.flip_camera_ios, size: 13, color: Colors.white),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _currentLens == CameraLensDirection.front ? 'Rear' : 'Front',
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
-                    ),
-                  ),
-
-                  Row(
-                    children: [
-                      InkWell(
-                        onTap: _handleRetake,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.refresh, size: 13, color: Colors.white),
-                              SizedBox(width: 4),
-                              Text('Retake', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      InkWell(
-                        onTap: _toggleCameraLens,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.flip_camera_ios, size: 13, color: Colors.white),
-                              const SizedBox(width: 4),
-                              Text(
-                                _currentLens == CameraLensDirection.front ? 'Rear' : 'Front',
-                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ],
               ),
             ),
 
-            // Bottom Location Detected Banner Pill (Real GPS Location Detected)
+            // Camera Shutter Button (Allows worker to take picture)
+            if (_isCameraReady && _snappedPhoto == null)
+              Positioned(
+                bottom: 58,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: InkWell(
+                    onTap: _isCapturing ? null : _takePhoto,
+                    borderRadius: BorderRadius.circular(25),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.camera_alt, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Take Photo',
+                            style: TextStyle(
+                              color: Color(0xFF0F172A),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // Bottom Location Banner (NO coordinates, clean address and verification badge)
             Positioned(
               bottom: 12,
               left: 12,
@@ -362,7 +433,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                             width: 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: _isLocating ? Colors.amber : AppColors.success,
+                              color: _isLocating ? Colors.amber : (hasLocation ? AppColors.success : Colors.white38),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -372,29 +443,14 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      _isLocating ? 'DETECTING GPS...' : 'LIVE LOCATION DETECTED',
-                                      style: TextStyle(
-                                        color: _isLocating ? Colors.amber : Colors.white70,
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                    if (_locationResult != null) ...[
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '(${_locationResult!.formattedCoordinates})',
-                                        style: const TextStyle(
-                                          color: Colors.white38,
-                                          fontSize: 7.5,
-                                          fontFamily: 'monospace',
-                                        ),
-                                      ),
-                                    ],
-                                  ],
+                                Text(
+                                  _isLocating ? 'DETECTING LOCATION...' : (hasLocation ? 'VERIFIED LOCATION' : 'WORK SITE'),
+                                  style: TextStyle(
+                                    color: _isLocating ? Colors.amber : Colors.white70,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
                                 Text(
                                   widget.locationAddress,
@@ -412,32 +468,32 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.check, size: 12, color: AppColors.success),
-                          const SizedBox(width: 4),
-                          Text(
-                            _locationResult?.statusText.contains('Outside') == true
-                                ? 'Near Site'
-                                : 'Within Site',
-                            style: const TextStyle(
-                              color: AppColors.success,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
+                    if (hasLocation) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check, size: 12, color: AppColors.success),
+                            SizedBox(width: 4),
+                            Text(
+                              'Within Site',
+                              style: TextStyle(
+                                color: AppColors.success,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

@@ -36,7 +36,7 @@ class SiteTrackLogo extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'SiteTrack',
+              'Sitetrack',
               style: TextStyle(
                 color: titleColor,
                 fontSize: size * 0.58,

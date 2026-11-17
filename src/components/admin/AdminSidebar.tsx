@@ -28,7 +28,7 @@ export const AdminSidebar: React.FC = () => {
             </div>
             <div>
               <span className="font-extrabold text-xl tracking-tight text-white block leading-none">
-                SiteTrack
+                Sitetrack
               </span>
               <span className="text-[9px] uppercase tracking-widest text-blue-400 font-semibold mt-1 block">
                 TOOLS. PEOPLE. PROGRESS.

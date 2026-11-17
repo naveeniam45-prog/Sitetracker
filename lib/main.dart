@@ -20,7 +20,7 @@ class SiteTrackApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppStateProvider()),
       ],
       child: MaterialApp(
-        title: 'SiteTrack',
+        title: 'Sitetrack',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         initialRoute: RouteNames.login,

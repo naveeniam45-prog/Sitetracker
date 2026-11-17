@@ -93,6 +93,8 @@ export interface AttendanceRecord {
   date: string;
   checkInTime?: string;
   checkOutTime?: string;
+  checkInTimestamp?: string;
+  checkOutTimestamp?: string;
   workingHours?: string;
   status: AttendanceStatus;
   checkInPhoto?: string;

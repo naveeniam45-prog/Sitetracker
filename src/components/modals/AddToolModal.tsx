@@ -39,7 +39,7 @@ export const AddToolModal: React.FC<AddToolModalProps> = ({ onClose }) => {
       addedOn: '14 Sep 2026',
       daysAtCurrentSite: 1,
       totalUsageDays: 0,
-      description: 'Heavy duty power tool registered into SiteTrack asset system.',
+      description: 'Heavy duty power tool registered into Sitetrack asset system.',
       movementHistory: [
         {
           id: `mov-${Date.now()}`,

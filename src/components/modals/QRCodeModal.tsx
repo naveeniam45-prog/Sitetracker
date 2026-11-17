@@ -32,7 +32,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ toolId, onClose }) => 
         {/* Printable Badge Area */}
         <div className="p-5 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 space-y-3">
           <div className="flex items-center justify-center gap-1.5 text-blue-700 font-extrabold text-sm">
-            <span>SiteTrack Physical Tag</span>
+            <span>Sitetrack Physical Tag</span>
           </div>
 
           <div className="p-3 bg-white border rounded-xl inline-block shadow-sm">
@@ -71,7 +71,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ toolId, onClose }) => 
 
           <div>
             <span className="font-mono font-bold text-slate-900 text-sm block">{toolId}</span>
-            <span className="text-[10px] text-slate-500">Scan via SiteTrack mobile camera to accept handover</span>
+            <span className="text-[10px] text-slate-500">Scan via Sitetrack mobile camera to accept handover</span>
           </div>
         </div>
 
