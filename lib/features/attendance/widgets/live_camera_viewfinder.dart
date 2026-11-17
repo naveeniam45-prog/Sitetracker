@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/services/location_service.dart';
 
 class LiveCameraViewfinder extends StatefulWidget {
   final String locationAddress;
+  final double siteLat;
+  final double siteLng;
   final String? fallbackPhotoUrl;
   final VoidCallback? onPhotoSnapped;
 
   const LiveCameraViewfinder({
     super.key,
     required this.locationAddress,
+    this.siteLat = 10.0159,
+    this.siteLng = 76.3638,
     this.fallbackPhotoUrl,
     this.onPhotoSnapped,
   });
@@ -25,6 +30,10 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
   CameraLensDirection _currentLens = CameraLensDirection.front;
   int _simulatedPhotoIndex = 0;
 
+  // Real GPS State
+  LocationResult? _locationResult;
+  bool _isLocating = true;
+
   final List<String> _simulatedPhotos = const [
     'https://images.unsplash.com/photo-1541888946425-d0fbb186f5f7?w=800&auto=format&fit=crop&q=80',
     'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80',
@@ -36,6 +45,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initializeCamera();
+    _fetchLiveLocation();
   }
 
   @override
@@ -56,6 +66,21 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
       controller.dispose();
     } else if (state == AppLifecycleState.resumed) {
       _initializeCamera();
+      _fetchLiveLocation();
+    }
+  }
+
+  Future<void> _fetchLiveLocation() async {
+    setState(() => _isLocating = true);
+    final result = await LocationService.getCurrentLocation(
+      siteLat: widget.siteLat,
+      siteLng: widget.siteLng,
+    );
+    if (mounted) {
+      setState(() {
+        _locationResult = result;
+        _isLocating = false;
+      });
     }
   }
 
@@ -119,9 +144,10 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
     setState(() {
       _simulatedPhotoIndex++;
     });
+    _fetchLiveLocation();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Camera viewpoint refreshed'),
+        content: Text('Camera view & GPS location refreshed'),
         duration: Duration(seconds: 1),
         behavior: SnackBarBehavior.floating,
       ),
@@ -150,7 +176,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Live Video Feed from Camera OR Fallback simulated viewfinder
+            // Live Video Feed from Camera OR Fallback simulated worksite
             if (_isCameraReady && _cameraController != null && _cameraController!.value.isInitialized)
               FittedBox(
                 fit: BoxFit.cover,
@@ -314,7 +340,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
               ),
             ),
 
-            // Bottom Location Detected Banner Pill (Page 6 Mockup)
+            // Bottom Location Detected Banner Pill (Real GPS Location Detected)
             Positioned(
               bottom: 12,
               left: 12,
@@ -335,8 +361,8 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                           Container(
                             width: 8,
                             height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppColors.success,
+                            decoration: BoxDecoration(
+                              color: _isLocating ? Colors.amber : AppColors.success,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -346,14 +372,29 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Text(
-                                  'LOCATION DETECTED',
-                                  style: TextStyle(
-                                    color: Colors.white54,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.5,
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      _isLocating ? 'DETECTING GPS...' : 'LIVE LOCATION DETECTED',
+                                      style: TextStyle(
+                                        color: _isLocating ? Colors.amber : Colors.white70,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    if (_locationResult != null) ...[
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '(${_locationResult!.formattedCoordinates})',
+                                        style: const TextStyle(
+                                          color: Colors.white38,
+                                          fontSize: 7.5,
+                                          fontFamily: 'monospace',
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                                 Text(
                                   widget.locationAddress,
@@ -379,14 +420,16 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check, size: 12, color: AppColors.success),
-                          SizedBox(width: 4),
+                          const Icon(Icons.check, size: 12, color: AppColors.success),
+                          const SizedBox(width: 4),
                           Text(
-                            'Within Site',
-                            style: TextStyle(
+                            _locationResult?.statusText.contains('Outside') == true
+                                ? 'Near Site'
+                                : 'Within Site',
+                            style: const TextStyle(
                               color: AppColors.success,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
