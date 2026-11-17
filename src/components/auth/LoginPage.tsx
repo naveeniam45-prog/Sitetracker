@@ -36,33 +36,34 @@ export const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 selection:bg-blue-500 selection:text-white">
       <div className="w-full max-w-md relative z-10">
         
-        {/* Brand Header */}
+        {/* ============================================================== */}
+        {/* 1. OUTSIDE THE BOX: SITETRACK LOGO & HEADING IN CENTER          */}
+        {/* ============================================================== */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center gap-3 bg-white px-5 py-2.5 rounded-2xl border border-slate-200/90 shadow-sm mb-4">
+          <div className="inline-flex items-center justify-center gap-3 mb-2">
             {/* 3-Pillar Geometric Brand Logo matching PDF Page 6 */}
-            <svg width="32" height="34" viewBox="0 0 32 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="36" height="38" viewBox="0 0 32 34" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="1" y="4" width="7.5" height="20" rx="3" fill="#2563EB" />
               <rect x="12" y="1" width="7.5" height="28" rx="3" fill="#2563EB" />
               <rect x="23" y="4" width="7.5" height="20" rx="3" fill="#2563EB" />
             </svg>
             <div className="text-left">
-              <span className="text-xl font-extrabold tracking-tight text-slate-900 block leading-none">
+              <span className="text-2xl font-extrabold tracking-tight text-slate-900 block leading-none">
                 SiteTrack
               </span>
-              <span className="text-[8px] uppercase tracking-widest text-blue-600 font-bold">
+              <span className="text-[9px] uppercase tracking-widest text-blue-600 font-bold">
                 TOOLS. PEOPLE. PROGRESS.
               </span>
             </div>
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight sm:text-3xl">
-            Worker Sign In
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Sign in to access worksite Check-In & Check-Out
+          <p className="text-xs text-slate-500 font-medium">
+            Worker Attendance Platform
           </p>
         </div>
 
-        {/* Elevated Login Card with Box & Hover Effect */}
+        {/* ============================================================== */}
+        {/* 2. THE LOGIN BOX: ONLY USERNAME AND PASSWORD                   */}
+        {/* ============================================================== */}
         <div 
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
@@ -100,18 +101,9 @@ export const LoginPage: React.FC = () => {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-slate-700">
-                  Password
-                </label>
-                <a 
-                  href="#forgot" 
-                  onClick={(e) => { e.preventDefault(); alert('Please contact your site administrator to reset your password.'); }} 
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-                >
-                  Forgot password?
-                </a>
-              </div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Password
+              </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock className="w-4 h-4" />
@@ -134,27 +126,22 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-600 font-medium">
-                <input type="checkbox" defaultChecked className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                <span>Remember me</span>
-              </label>
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 group disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    <span>Sign In</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </button>
             </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full mt-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 group disabled:opacity-50"
-            >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              ) : (
-                <>
-                  <span>Sign In</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </>
-              )}
-            </button>
           </form>
         </div>
       </div>
