@@ -301,7 +301,7 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                     const Icon(Icons.calendar_today_rounded, size: 13, color: AppColors.primaryLight),
                     const SizedBox(width: 6),
                     Text(
-                      '14 Sep 2026 Monday',
+                      DateFormat('d MMM yyyy EEEE').format(DateTime.now()),
                       style: TextStyle(
                         color: textTitle,
                         fontSize: 11,

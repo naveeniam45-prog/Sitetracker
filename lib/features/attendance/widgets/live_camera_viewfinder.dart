@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/location_service.dart';
+import '../../../core/services/camera_helper.dart';
 
 class LiveCameraViewfinder extends StatefulWidget {
   final String locationAddress;
@@ -28,7 +28,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
   CameraController? _cameraController;
   bool _isCameraReady = false;
   CameraLensDirection _currentLens = CameraLensDirection.front;
-  XFile? _snappedPhoto;
+  Uint8List? _snappedBytes;
   bool _isCapturing = false;
 
   // Real GPS State
@@ -107,7 +107,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
         });
       }
     } catch (e) {
-      debugPrint('Camera initialization error: $e');
+      debugPrint('Camera controller init error (will use direct camera capture): $e');
       if (mounted) {
         setState(() {
           _isCameraReady = false;
@@ -118,8 +118,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
 
   Future<void> _toggleCameraLens() async {
     if (_cameras.length < 2) {
-      // If controller cameras aren't switchable, launch device camera directly
-      await _openDeviceCamera();
+      await _handleCapture();
       return;
     }
 
@@ -134,21 +133,20 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
     await _initializeCamera();
   }
 
-  // Opens the device camera directly (works 100% on iOS, Android, and Web)
-  Future<void> _openDeviceCamera() async {
-    try {
-      final picker = ImagePicker();
-      final photo = await picker.pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.front,
-        maxWidth: 1280,
-        maxHeight: 1280,
-        imageQuality: 85,
-      );
+  // Unified camera capture that works seamlessly across all devices and web
+  Future<void> _handleCapture() async {
+    if (_isCapturing) return;
 
-      if (photo != null) {
+    // 1. If camera controller is active, snap via controller
+    final controller = _cameraController;
+    if (controller != null && controller.value.isInitialized) {
+      try {
+        setState(() => _isCapturing = true);
+        final photo = await controller.takePicture();
+        final bytes = await photo.readAsBytes();
         setState(() {
-          _snappedPhoto = photo;
+          _snappedBytes = bytes;
+          _isCapturing = false;
         });
         widget.onPhotoSnapped?.call();
         if (mounted) {
@@ -160,56 +158,44 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
             ),
           );
         }
-      }
-    } catch (e) {
-      debugPrint('Device camera error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Camera access: $e'),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        return;
+      } catch (e) {
+        debugPrint('Controller takePicture error: $e');
+        setState(() => _isCapturing = false);
       }
     }
-  }
 
-  Future<void> _takePhoto() async {
-    final controller = _cameraController;
-    if (controller != null && controller.value.isInitialized) {
-      if (_isCapturing) return;
-      try {
-        setState(() => _isCapturing = true);
-        final photo = await controller.takePicture();
+    // 2. Direct worksite photo capture (Web HTML5 capture / native picker)
+    try {
+      setState(() => _isCapturing = true);
+      final bytes = await captureWorksitePhoto();
+      if (bytes != null) {
         setState(() {
-          _snappedPhoto = photo;
+          _snappedBytes = bytes;
           _isCapturing = false;
         });
         widget.onPhotoSnapped?.call();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✓ Photo captured successfully'),
+              content: Text('✓ Worksite photo captured successfully'),
               duration: Duration(seconds: 1),
               behavior: SnackBarBehavior.floating,
             ),
           );
         }
-        return;
-      } catch (e) {
-        debugPrint('Error taking photo via controller: $e');
+      } else {
         setState(() => _isCapturing = false);
       }
+    } catch (e) {
+      debugPrint('Direct capture error: $e');
+      setState(() => _isCapturing = false);
     }
-
-    // Fallback directly to device camera
-    await _openDeviceCamera();
   }
 
   void _handleRetake() {
     setState(() {
-      _snappedPhoto = null;
+      _snappedBytes = null;
     });
     _fetchLiveLocation();
     _initializeCamera();
@@ -239,21 +225,13 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // 1. Live Video Feed from Camera OR Captured Photo OR Camera Access Prompt
-            if (_snappedPhoto != null)
-              FutureBuilder<Uint8List>(
-                future: _snappedPhoto!.readAsBytes(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    return Image.memory(
-                      snapshot.data!,
-                      fit: BoxFit.cover,
-                    );
-                  }
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  );
-                },
+            // 1. Live Video Feed from Camera OR Captured Photo OR Standby Tap Area
+            if (_snappedBytes != null)
+              Image.memory(
+                _snappedBytes!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
               )
             else if (_isCameraReady && _cameraController != null && _cameraController!.value.isInitialized)
               FittedBox(
@@ -266,34 +244,46 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
               )
             else
               GestureDetector(
-                onTap: _openDeviceCamera,
+                onTap: _handleCapture,
+                behavior: HitTestBehavior.opaque,
                 child: Container(
                   color: const Color(0xFF1E293B),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.camera_alt_outlined, color: Colors.white70, size: 48),
-                        const SizedBox(height: 10),
+                        // Standby circular guide
+                        Container(
+                          width: 88,
+                          height: 88,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white24, width: 2),
+                            color: Colors.white.withValues(alpha: 0.05),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.camera_alt_rounded,
+                              size: 40,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         const Text(
                           'Live Camera Viewfinder',
-                          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         const Text(
                           'Tap anywhere to take worksite photo',
-                          style: TextStyle(color: Colors.white54, fontSize: 11),
-                        ),
-                        const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.camera, size: 16),
-                          label: const Text('Open Camera'),
-                          onPressed: _openDeviceCamera,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 11,
                           ),
                         ),
                       ],
@@ -317,8 +307,8 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
               ),
             ),
 
-            // Center Face Alignment Oval Guide
-            if (_snappedPhoto == null)
+            // Center Face Alignment Oval Guide (When camera is live and no photo captured)
+            if (_isCameraReady && _snappedBytes == null)
               Center(
                 child: Container(
                   width: 142,
@@ -326,30 +316,21 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: _isCameraReady ? AppColors.success : Colors.white30,
+                      color: AppColors.success,
                       width: 2.5,
                     ),
-                    boxShadow: _isCameraReady
-                        ? [
-                            BoxShadow(
-                              color: AppColors.success.withValues(alpha: 0.3),
-                              blurRadius: 14,
-                              spreadRadius: 2,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.person_outline_rounded,
-                      size: 64,
-                      color: Colors.white54,
-                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.success.withValues(alpha: 0.3),
+                        blurRadius: 14,
+                        spreadRadius: 2,
+                      ),
+                    ],
                   ),
                 ),
               ),
 
-            // Top HUD Bar: Location on top-left (only when location is on) & Lens Flip / Retake on top-right
+            // Top HUD Bar: Location on top-left (only when location is on) & Retake / Camera on top-right
             Positioned(
               top: 12,
               left: 12,
@@ -389,12 +370,12 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                   // Top-Right: Retake & Lens Flip / Open Camera
                   Row(
                     children: [
-                      if (_snappedPhoto != null)
+                      if (_snappedBytes != null)
                         InkWell(
                           onTap: _handleRetake,
                           borderRadius: BorderRadius.circular(20),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.25),
                               borderRadius: BorderRadius.circular(20),
@@ -403,30 +384,41 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
                               children: [
                                 Icon(Icons.refresh, size: 13, color: Colors.white),
                                 SizedBox(width: 4),
-                                Text('Retake', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                                Text(
+                                  'Retake',
+                                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                                ),
                               ],
                             ),
                           ),
                         )
                       else ...[
                         InkWell(
-                          onTap: _isCameraReady ? _toggleCameraLens : _openDeviceCamera,
+                          onTap: _isCameraReady ? _toggleCameraLens : _handleCapture,
                           borderRadius: BorderRadius.circular(20),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.25),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               children: [
-                                Icon(_isCameraReady ? Icons.flip_camera_ios : Icons.camera_alt, size: 13, color: Colors.white),
-                                const SizedBox(width: 4),
+                                Icon(
+                                  _isCameraReady ? Icons.flip_camera_ios : Icons.camera_alt,
+                                  size: 13,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 5),
                                 Text(
                                   _isCameraReady
                                       ? (_currentLens == CameraLensDirection.front ? 'Rear' : 'Front')
                                       : 'Camera',
-                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ],
                             ),
@@ -439,15 +431,15 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
               ),
             ),
 
-            // Camera Shutter Button (Allows worker to take picture)
-            if (_snappedPhoto == null)
+            // Camera Shutter Button (Shown ONLY when camera controller is actively running live feed)
+            if (_isCameraReady && _snappedBytes == null)
               Positioned(
-                bottom: 58,
+                bottom: 56,
                 left: 0,
                 right: 0,
                 child: Center(
                   child: InkWell(
-                    onTap: _takePhoto,
+                    onTap: _handleCapture,
                     borderRadius: BorderRadius.circular(25),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
