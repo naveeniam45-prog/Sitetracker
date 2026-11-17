@@ -279,7 +279,38 @@ export const WorkerMobileView: React.FC = () => {
               {/* Action Section: Check In VS Check Out (Matching Page 6 Mockups) */}
               {!isCheckedIn && !isCheckedOut && (
                 /* STATE 1: CHECK IN SCREEN */
-                <div className="pt-2">
+                <div className="space-y-3 pt-1">
+                  {/* Status Metric Cards: Check In Time + Working Hours (Exact match like Check Out) */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-3 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                        <Check className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                          Check In
+                        </p>
+                        <p className="text-xs font-bold text-white">
+                          08:15 AM
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-3 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                        <Clock className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                          Total Hours
+                        </p>
+                        <p className="text-xs font-bold text-white">
+                          9h 50m
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <button
                     type="button"
                     onClick={handleCheckIn}
@@ -295,7 +326,7 @@ export const WorkerMobileView: React.FC = () => {
                     </div>
                     <div className="w-9 h-9"></div>
                   </button>
-                  <p className="text-center text-[11px] text-slate-400 mt-2">
+                  <p className="text-center text-[11px] text-slate-400">
                     Live worksite photograph and GPS will be verified automatically
                   </p>
                 </div>

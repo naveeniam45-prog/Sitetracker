@@ -349,17 +349,17 @@ class AppStateProvider extends ChangeNotifier {
   // Attendance records (from Page 6 of PDF)
   List<AttendanceModel> _attendanceRecords = [
     const AttendanceModel(
-      id: 'att-1',
+      id: 'att-1-prev',
       workerId: 'worker-1',
       workerName: 'Raj Kumar',
       workerAvatar: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=150&auto=format&fit=crop&q=80',
       employeeId: 'EMP001',
       siteId: 'site-1',
       siteName: 'Kochi Project',
-      date: '14 Sep 2026',
-      checkInTime: '09:04 AM',
-      checkOutTime: '06:18 PM',
-      workingHours: '9h 14m',
+      date: '13 Sep 2026',
+      checkInTime: '08:15 AM',
+      checkOutTime: '06:05 PM',
+      workingHours: '9h 50m',
       status: 'Present',
       locationVerified: true,
       latitude: 10.0159,
@@ -508,12 +508,17 @@ class AppStateProvider extends ChangeNotifier {
       if (a.id == attendanceId) {
         return a.copyWith(
           checkOutTime: timeStr,
-          workingHours: '9h 14m',
+          workingHours: '9h 50m',
           status: 'Present',
         );
       }
       return a;
     }).toList();
+    notifyListeners();
+  }
+
+  void resetWorkerAttendance(String workerId) {
+    _attendanceRecords = _attendanceRecords.where((a) => !(a.workerId == workerId && a.date == '14 Sep 2026')).toList();
     notifyListeners();
   }
 
