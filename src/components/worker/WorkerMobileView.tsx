@@ -4,7 +4,7 @@ import { CameraCapture } from './CameraCapture';
 import { 
   MapPin, Calendar, Clock, CheckCircle2, ArrowRight, 
   ChevronRight, LogOut, Check, User as UserIcon,
-  CheckSquare, Sun, Moon
+  Home, Sun, Moon
 } from 'lucide-react';
 
 export const WorkerMobileView: React.FC = () => {
@@ -24,7 +24,7 @@ export const WorkerMobileView: React.FC = () => {
   const [isSiteModalOpen, setIsSiteModalOpen] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState<{ title: string; message: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<'attendance' | 'profile'>('attendance');
+  const [activeTab, setActiveTab] = useState<'home' | 'profile'>('home');
 
   // Dark & Light Mode Toggle (defaults to Dark)
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
@@ -182,8 +182,11 @@ export const WorkerMobileView: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'attendance' ? (
-            <>
+          {activeTab === 'home' ? (
+            /* HOME TAB: WORKER ATTENDANCE & TRACKING INSIDE A DEFINED BOX */
+            <div className={`border rounded-3xl p-5 space-y-4 shadow-xl ${
+              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
               {/* Greeting & Date Header */}
               <div className="flex items-center justify-between">
                 <div>
@@ -199,7 +202,7 @@ export const WorkerMobileView: React.FC = () => {
                 </div>
 
                 <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold shadow-xs ${
-                  isDarkMode ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
+                  isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
                 }`}>
                   <Calendar className="w-3.5 h-3.5 text-blue-500" />
                   <span>14 Sep 2026 Monday</span>
@@ -208,7 +211,7 @@ export const WorkerMobileView: React.FC = () => {
 
               {/* Worksite Selector Banner */}
               <div className={`rounded-2xl p-3.5 border flex items-center justify-between shadow-xs ${
-                isDarkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'
+                isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div className="flex items-center gap-3 overflow-hidden">
                   <div className="w-9 h-9 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center shrink-0">
@@ -249,7 +252,7 @@ export const WorkerMobileView: React.FC = () => {
               {/* Dual Metric Cards (Check In & Total Hours) */}
               <div className="grid grid-cols-2 gap-2.5">
                 <div className={`border rounded-2xl p-3 flex items-center gap-3 shadow-xs ${
-                  isDarkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'
+                  isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
                 }`}>
                   <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
                     <Check className="w-4 h-4 text-emerald-400" />
@@ -265,7 +268,7 @@ export const WorkerMobileView: React.FC = () => {
                 </div>
 
                 <div className={`border rounded-2xl p-3 flex items-center gap-3 shadow-xs ${
-                  isDarkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'
+                  isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
                 }`}>
                   <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
                     <Clock className="w-4 h-4 text-blue-400" />
@@ -332,8 +335,8 @@ export const WorkerMobileView: React.FC = () => {
 
               {isCheckedOut && (
                 /* STATE 3: SHIFT COMPLETED */
-                <div className={`border rounded-3xl p-5 text-center space-y-3 shadow-sm ${
-                  isDarkMode ? 'bg-slate-800/90 border-emerald-500/40' : 'bg-white border-emerald-300'
+                <div className={`border rounded-2xl p-5 text-center space-y-3 shadow-xs ${
+                  isDarkMode ? 'bg-slate-950/60 border-emerald-500/40' : 'bg-slate-50 border-emerald-300'
                 }`}>
                   <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-7 h-7" />
@@ -359,38 +362,48 @@ export const WorkerMobileView: React.FC = () => {
                   </button>
                 </div>
               )}
-            </>
+            </div>
           ) : (
-            /* PROFILE TAB: JUST NAME, DETAILS, AND LOG OUT */
-            <div className="space-y-5 pt-3">
-              <div className={`border rounded-3xl p-6 text-center shadow-xs ${
-                isDarkMode ? 'bg-slate-800/90 border-slate-700' : 'bg-white border-slate-200'
-              }`}>
-                <div className="w-20 h-20 rounded-full border-4 border-blue-600 mx-auto overflow-hidden shadow-md mb-3">
-                  <img
-                    src={currentUser?.avatar || 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80'}
-                    alt={workerName}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+            /* PROFILE TAB: JUST NAME, DETAILS, AND LOG OUT INSIDE A DEFINED BOX */
+            <div className={`border rounded-3xl p-6 text-center shadow-xl space-y-5 ${
+              isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
+                <h3 className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  Worker Profile
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-extrabold text-[10px] tracking-wide">
+                  VERIFIED
+                </span>
+              </div>
+
+              <div className="w-20 h-20 rounded-full border-4 border-blue-600 mx-auto overflow-hidden shadow-md">
+                <img
+                  src={currentUser?.avatar || 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80'}
+                  alt={workerName}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div>
                 <h3 className={`text-xl font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   {workerName}
                 </h3>
                 <span className="inline-block mt-1 px-3 py-1 bg-blue-500/15 text-blue-400 rounded-full text-xs font-bold">
                   {workerRole.toUpperCase()} • {currentUser?.employeeId || 'EMP001'}
                 </span>
-
-                <div className={`mt-5 pt-4 border-t flex items-center justify-center gap-2 text-xs ${
-                  isDarkMode ? 'border-slate-700 text-slate-400' : 'border-slate-100 text-slate-500'
-                }`}>
-                  <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
-                  <span className={`font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                    {selectedSite.name}
-                  </span>
-                </div>
               </div>
 
-              {/* Clean Prominent Log Out Button */}
+              <div className={`p-3 rounded-2xl border flex items-center justify-center gap-2 text-xs ${
+                isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
+              }`}>
+                <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
+                <span className="font-semibold truncate">
+                  {selectedSite.name}
+                </span>
+              </div>
+
+              {/* Clean Prominent Log Out Button INSIDE THE BOX */}
               <button
                 onClick={logout}
                 className="w-full py-3.5 px-4 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold rounded-2xl text-sm transition-all flex items-center justify-center gap-2"
@@ -402,23 +415,23 @@ export const WorkerMobileView: React.FC = () => {
           )}
         </div>
 
-        {/* Bottom Navigation Bar: Attendance & Profile */}
+        {/* Bottom Navigation Bar: Home & Profile */}
         <div className={`border-t py-2 px-6 flex items-center justify-around shrink-0 transition-colors ${
           isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90'
         }`}>
           <button
-            onClick={() => setActiveTab('attendance')}
+            onClick={() => setActiveTab('home')}
             className={`flex flex-col items-center gap-1 transition-colors ${
-              activeTab === 'attendance' ? 'text-blue-500 font-bold' : 'text-slate-400 hover:text-slate-200 font-medium'
+              activeTab === 'home' ? 'text-blue-500 font-bold' : (isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600') + ' font-medium'
             }`}
           >
-            <CheckSquare className="w-5 h-5" />
-            <span className="text-[10px]">Attendance</span>
+            <Home className="w-5 h-5" />
+            <span className="text-[10px]">Home</span>
           </button>
           <button
             onClick={() => setActiveTab('profile')}
             className={`flex flex-col items-center gap-1 transition-colors ${
-              activeTab === 'profile' ? 'text-blue-500 font-bold' : 'text-slate-400 hover:text-slate-200 font-medium'
+              activeTab === 'profile' ? 'text-blue-500 font-bold' : (isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600') + ' font-medium'
             }`}
           >
             <UserIcon className="w-5 h-5" />

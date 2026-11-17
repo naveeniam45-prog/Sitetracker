@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
-  Lock, User as UserIcon, Eye, EyeOff, ArrowRight,
-  Sun, Moon
+  Lock, User as UserIcon, Eye, EyeOff, ArrowRight
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -14,8 +13,8 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   
-  // Dark / Light Mode Toggle (defaults to Dark background as requested)
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  // Login page is always in sleek dark mode; toggle effect is shown after login
+  const isDarkMode = true;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,44 +36,8 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 ${
-      isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-900'
-    }`}>
+    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-md relative z-10">
-        
-        {/* Dark & Light Toggle on Top Right */}
-        <div className="flex justify-end mb-4">
-          <div className={`inline-flex items-center p-1 rounded-full border transition-all ${
-            isDarkMode 
-              ? 'bg-slate-900 border-slate-800' 
-              : 'bg-white border-slate-200 shadow-xs'
-          }`}>
-            <button
-              type="button"
-              onClick={() => setIsDarkMode(false)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                !isDarkMode
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Sun className="w-3.5 h-3.5" />
-              <span>Light</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsDarkMode(true)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                isDarkMode
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              <Moon className="w-3.5 h-3.5" />
-              <span>Dark</span>
-            </button>
-          </div>
-        </div>
 
         {/* OUTSIDE THE BOX: SITETRACK BRAND & APP HEADING */}
         <div className="text-center mb-6">

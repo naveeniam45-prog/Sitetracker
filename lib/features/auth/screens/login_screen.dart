@@ -64,21 +64,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<AppStateProvider>();
-    final isDarkMode = provider.isDarkMode;
+    // Login page is styled in sleek dark mode by default; toggle effect is shown after login
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isMobile = screenWidth < 500;
 
-    // Theme Colors based on Dark / Light toggle
-    final bgColor = isDarkMode ? const Color(0xFF0A0F1D) : const Color(0xFFF1F5F9);
-    final cardBgColor = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final cardBorderColor = isDarkMode
-        ? (_isCardHovered ? AppColors.primaryLight.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.1))
-        : (_isCardHovered ? AppColors.primaryLight.withValues(alpha: 0.6) : const Color(0xFFE2E8F0));
-    final textColor = isDarkMode ? Colors.white : const Color(0xFF0F172A);
-    final textSecondaryColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final fieldBgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
-    final fieldBorderColor = isDarkMode ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0);
+    // Dark theme for login page
+    const bgColor = Color(0xFF0A0F1D);
+    const cardBgColor = Color(0xFF1E293B);
+    final cardBorderColor = _isCardHovered 
+        ? AppColors.primaryLight.withValues(alpha: 0.6) 
+        : Colors.white.withValues(alpha: 0.12);
+    const textColor = Colors.white;
+    const textSecondaryColor = Color(0xFF94A3B8);
+    const fieldBgColor = Color(0xFF0F172A);
+    final fieldBorderColor = Colors.white.withValues(alpha: 0.12);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -91,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
               physics: const ClampingScrollPhysics(),
               padding: EdgeInsets.symmetric(
                 horizontal: isMobile ? 18 : 24,
-                vertical: isMobile ? 16 : 24,
+                vertical: isMobile ? 24 : 36,
               ),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
@@ -99,112 +98,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // TOP BAR: Dark & Light Mode Toggle Effect
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: isDarkMode
-                              ? Colors.white.withValues(alpha: 0.08)
-                              : Colors.black.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: isDarkMode
-                                ? Colors.white.withValues(alpha: 0.14)
-                                : Colors.black.withValues(alpha: 0.08),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            InkWell(
-                              onTap: () => provider.setDarkMode(false),
-                              borderRadius: BorderRadius.circular(20),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: !isDarkMode ? Colors.white : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: !isDarkMode
-                                      ? [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.08),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 1),
-                                          )
-                                        ]
-                                      : null,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.light_mode_rounded,
-                                      size: 14,
-                                      color: !isDarkMode ? AppColors.primary : Colors.white60,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Light',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: !isDarkMode ? const Color(0xFF0F172A) : Colors.white60,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            InkWell(
-                              onTap: () => provider.setDarkMode(true),
-                              borderRadius: BorderRadius.circular(20),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: isDarkMode ? AppColors.primary : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: isDarkMode
-                                      ? [
-                                          BoxShadow(
-                                            color: AppColors.primary.withValues(alpha: 0.4),
-                                            blurRadius: 6,
-                                            offset: const Offset(0, 2),
-                                          )
-                                        ]
-                                      : null,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.dark_mode_rounded,
-                                      size: 14,
-                                      color: isDarkMode ? Colors.white : Colors.black54,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Dark',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDarkMode ? Colors.white : Colors.black54,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
                     // ==========================================
                     // OUTSIDE THE BOX: SITETRACK BRAND & APP HEADING
                     // (Tagline "TOOLS. PEOPLE. PROGRESS." removed as requested)
@@ -212,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Center(
                       child: SiteTrackLogo(
                         size: isMobile ? 38 : 44,
-                        isDark: isDarkMode,
+                        isDark: true,
                         showTagline: false, // REMOVED tools, people, progress tagline
                       ),
                     ),
@@ -257,9 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: isDarkMode
-                                  ? Colors.black.withValues(alpha: _isCardHovered ? 0.55 : 0.35)
-                                  : const Color(0x100F172A),
+                              color: Colors.black.withValues(alpha: _isCardHovered ? 0.55 : 0.35),
                               blurRadius: _isCardHovered ? 28 : 16,
                               offset: Offset(0, _isCardHovered ? 12 : 6),
                             ),
@@ -291,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           _errorMessage!,
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: isDarkMode ? Colors.white : const Color(0xFF991B1B),
+                                            color: Colors.white,
                                             height: 1.3,
                                           ),
                                         ),
@@ -325,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 decoration: InputDecoration(
                                   hintText: 'e.g. EMP001',
                                   hintStyle: TextStyle(
-                                    color: isDarkMode ? Colors.white30 : const Color(0xFF94A3B8),
+                                    color: Colors.white30,
                                     fontSize: 13,
                                   ),
                                   prefixIcon: Icon(
@@ -379,7 +270,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 decoration: InputDecoration(
                                   hintText: '••••••••',
                                   hintStyle: TextStyle(
-                                    color: isDarkMode ? Colors.white30 : const Color(0xFF94A3B8),
+                                    color: Colors.white30,
                                     fontSize: 13,
                                   ),
                                   prefixIcon: Icon(
@@ -445,8 +336,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                             value: _rememberMe,
                                             activeColor: AppColors.primary,
                                             checkColor: Colors.white,
-                                            side: BorderSide(
-                                              color: isDarkMode ? Colors.white38 : const Color(0xFF94A3B8),
+                                            side: const BorderSide(
+                                              color: Colors.white38,
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.circular(4),
@@ -459,10 +350,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        Text(
+                                        const Text(
                                           'Remember me',
                                           style: TextStyle(
-                                            color: isDarkMode ? Colors.white70 : const Color(0xFF475569),
+                                            color: Colors.white70,
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
                                           ),
@@ -486,10 +377,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                       minimumSize: Size.zero,
                                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                     ),
-                                    child: Text(
+                                    child: const Text(
                                       'Forgot password?',
                                       style: TextStyle(
-                                        color: isDarkMode ? AppColors.primaryLight : AppColors.primary,
+                                        color: AppColors.primaryLight,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                       ),

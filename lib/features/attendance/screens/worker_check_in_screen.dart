@@ -18,7 +18,7 @@ class WorkerCheckInScreen extends StatefulWidget {
 class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
   late String _selectedSiteId;
   Timer? _timer;
-  int _currentBottomNavIndex = 0; // 0: Attendance, 1: Profile
+  int _currentBottomNavIndex = 0; // 0: Home, 1: Profile
 
   @override
   void initState() {
@@ -128,8 +128,8 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
     required String value,
     required bool isDarkMode,
   }) {
-    final cardBg = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final border = isDarkMode ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0);
+    final cardBg = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final border = isDarkMode ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
     final textValColor = isDarkMode ? Colors.white : const Color(0xFF0F172A);
     final textLblColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
@@ -137,15 +137,8 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: border),
-        boxShadow: [
-          BoxShadow(
-            color: isDarkMode ? Colors.black.withValues(alpha: 0.2) : const Color(0x080F172A),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -191,8 +184,8 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
     );
   }
 
-  // ATTENDANCE TAB (Check-In & Check-Out)
-  Widget _buildAttendanceView({
+  // HOME TAB (Worker Attendance & Real-Time Tracking inside a Defined Box)
+  Widget _buildHomeView({
     required AppStateProvider provider,
     required dynamic user,
     required String workerId,
@@ -207,19 +200,43 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
     required bool isDarkMode,
   }) {
     final cardBg = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final cardBorder = isDarkMode ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0);
+    final cardBorder = isDarkMode ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0);
     final textTitle = isDarkMode ? Colors.white : const Color(0xFF0F172A);
     final textMuted = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final innerBg = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final innerBorder = isDarkMode ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 16 : 20,
+        horizontal: isMobile ? 12 : 18,
         vertical: 14,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 20,
+              vertical: isMobile ? 18 : 22,
+            ),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: cardBorder, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: isDarkMode
+                      ? Colors.black.withValues(alpha: 0.45)
+                      : const Color(0x100F172A),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
           // Greeting & Date Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -257,16 +274,9 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: cardBg,
+                  color: innerBg,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: cardBorder),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isDarkMode ? Colors.black.withValues(alpha: 0.2) : const Color(0x050F172A),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
+                  border: Border.all(color: innerBorder),
                 ),
                 child: Row(
                   children: [
@@ -292,16 +302,9 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: cardBorder),
-              boxShadow: [
-                BoxShadow(
-                  color: isDarkMode ? Colors.black.withValues(alpha: 0.2) : const Color(0x060F172A),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: innerBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: innerBorder),
             ),
             child: Row(
               children: [
@@ -533,16 +536,9 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.4)),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDarkMode ? Colors.black.withValues(alpha: 0.25) : const Color(0x0A0F172A),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+                color: innerBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: innerBorder),
               ),
               child: Column(
                 children: [
@@ -596,13 +592,16 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
               ),
             ),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
         ],
       ),
-    );
+    ),
+  ),
+),
+);
   }
 
-  // PROFILE TAB (With Just Name, Details, and Clean Log Out Button)
+  // PROFILE TAB (With Just Name, Details, and Clean Log Out Button INSIDE THE BOX)
   Widget _buildProfileView({
     required AppStateProvider provider,
     required dynamic user,
@@ -613,36 +612,75 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
     required bool isDarkMode,
   }) {
     final cardBg = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final cardBorder = isDarkMode ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0);
+    final cardBorder = isDarkMode ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0);
     final textTitle = isDarkMode ? Colors.white : const Color(0xFF0F172A);
     final textMuted = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final innerBg = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final innerBorder = isDarkMode ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 18 : 24,
-        vertical: 20,
+        horizontal: isMobile ? 12 : 18,
+        vertical: 14,
       ),
-      child: Column(
-        children: [
-          // Profile Card with Avatar & Name
-          Container(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 18 : 24,
+              vertical: isMobile ? 22 : 28,
+            ),
             decoration: BoxDecoration(
               color: cardBg,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: cardBorder),
+              border: Border.all(color: cardBorder, width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: isDarkMode ? Colors.black.withValues(alpha: 0.25) : const Color(0x060F172A),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: isDarkMode
+                      ? Colors.black.withValues(alpha: 0.45)
+                      : const Color(0x100F172A),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
             child: Column(
               children: [
+                // Profile Header Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Worker Profile',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: textTitle,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16A34A).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'VERIFIED',
+                        style: TextStyle(
+                          color: Color(0xFF16A34A),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
                 // Worker Avatar
                 Container(
                   width: 86,
@@ -700,64 +738,72 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                 const SizedBox(height: 16),
 
                 // Work Site Info Row
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(10),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: innerBg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: innerBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? Colors.white.withValues(alpha: 0.08) : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.location_on_outlined, size: 18, color: AppColors.primaryLight),
                       ),
-                      child: Icon(Icons.location_on_outlined, size: 18, color: textMuted),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Assigned Work Site',
-                            style: TextStyle(color: textMuted, fontSize: 11, fontWeight: FontWeight.w500),
-                          ),
-                          Text(
-                            site.name,
-                            style: TextStyle(color: textTitle, fontSize: 13, fontWeight: FontWeight.w700),
-                          ),
-                        ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Assigned Work Site',
+                              style: TextStyle(color: textMuted, fontSize: 11, fontWeight: FontWeight.w500),
+                            ),
+                            Text(
+                              site.name,
+                              style: TextStyle(color: textTitle, fontSize: 13, fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
                       ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Clean Log Out Button INSIDE THE BOX (Never mixes with background)
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.logout_rounded, size: 18),
+                    onPressed: () {
+                      provider.logout();
+                      Navigator.pushReplacementNamed(context, RouteNames.login);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDarkMode ? const Color(0xFF450A0A) : const Color(0xFFFEF2F2),
+                      foregroundColor: const Color(0xFFDC2626),
+                      elevation: 0,
+                      side: BorderSide(color: isDarkMode ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
-                  ],
+                    label: const Text(
+                      'Log Out',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-
-          const SizedBox(height: 24),
-
-          // Clean Log Out Button (Prominent, as requested)
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.logout_rounded, size: 18),
-              onPressed: () {
-                provider.logout();
-                Navigator.pushReplacementNamed(context, RouteNames.login);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDarkMode ? const Color(0xFF450A0A) : const Color(0xFFFEF2F2),
-                foregroundColor: const Color(0xFFDC2626),
-                elevation: 0,
-                side: BorderSide(color: isDarkMode ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              label: const Text(
-                'Log Out',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -939,10 +985,10 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
 
                   Divider(color: headerBorder, height: 1),
 
-                  // Main Content: Attendance (Tab 0) OR Profile with Log Out (Tab 1)
+                  // Main Content: Home (Tab 0) OR Profile with Log Out (Tab 1)
                   Expanded(
                     child: _currentBottomNavIndex == 0
-                        ? _buildAttendanceView(
+                        ? _buildHomeView(
                             provider: provider,
                             user: user,
                             workerId: workerId,
@@ -967,7 +1013,7 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                           ),
                   ),
 
-                  // Modern Native Bottom Navigation Bar: Attendance & Profile
+                  // Modern Native Bottom Navigation Bar: Home & Profile
                   Container(
                     decoration: BoxDecoration(
                       color: navBarColor,
@@ -991,9 +1037,9 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                       type: BottomNavigationBarType.fixed,
                       items: const [
                         BottomNavigationBarItem(
-                          icon: Icon(Icons.assignment_turned_in_outlined),
-                          activeIcon: Icon(Icons.assignment_turned_in_rounded),
-                          label: 'Attendance',
+                          icon: Icon(Icons.home_outlined),
+                          activeIcon: Icon(Icons.home_rounded),
+                          label: 'Home',
                         ),
                         BottomNavigationBarItem(
                           icon: Icon(Icons.person_outline_rounded),
