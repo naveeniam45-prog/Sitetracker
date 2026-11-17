@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../features/auth/services/auth_service.dart';
@@ -27,6 +28,15 @@ class AppStateProvider extends ChangeNotifier {
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null;
+
+  // Worker Profile Photo Captured Live
+  Uint8List? _workerPhotoBytes;
+  Uint8List? get workerPhotoBytes => _workerPhotoBytes;
+
+  void updateWorkerPhoto(Uint8List? bytes) {
+    _workerPhotoBytes = bytes;
+    notifyListeners();
+  }
 
   // Selected tool for detail view
   String _selectedToolId = 'tool-1';
@@ -453,7 +463,11 @@ class AppStateProvider extends ChangeNotifier {
     required String workerId,
     required String siteId,
     String? photoUrl,
+    Uint8List? photoBytes,
   }) {
+    if (photoBytes != null) {
+      _workerPhotoBytes = photoBytes;
+    }
     final worker = _workers.firstWhere((w) => w.id == workerId, orElse: () => _workers[0]);
     final site = _sites.firstWhere((s) => s.id == siteId, orElse: () => _sites[0]);
     final now = DateTime.now();

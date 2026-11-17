@@ -4,7 +4,7 @@ import { CameraCapture } from './CameraCapture';
 import { 
   MapPin, Calendar, Clock, CheckCircle2, ArrowRight, 
   ChevronRight, LogOut, Check, User as UserIcon,
-  Home, Sun, Moon
+  Home, Sun, Moon, Camera as CameraIcon
 } from 'lucide-react';
 
 export const WorkerMobileView: React.FC = () => {
@@ -17,6 +17,7 @@ export const WorkerMobileView: React.FC = () => {
     checkOutWorker,
     isDarkMode,
     setIsDarkMode,
+    updateUserAvatar,
   } = useApp();
 
   const workerId = currentUser?.id || 'worker-1';
@@ -85,6 +86,9 @@ export const WorkerMobileView: React.FC = () => {
 
   const handleCheckIn = () => {
     const photoToSave = capturedPhoto || '';
+    if (photoToSave) {
+      updateUserAvatar(photoToSave);
+    }
     checkInWorker(workerId, selectedSite.id, photoToSave, {
       lat: selectedSite.latitude,
       lng: selectedSite.longitude
@@ -247,7 +251,10 @@ export const WorkerMobileView: React.FC = () => {
               {/* Real Live Camera Viewfinder with Webcam Access */}
               <div className="space-y-1.5">
                 <CameraCapture
-                  onCapture={(dataUrl) => setCapturedPhoto(dataUrl)}
+                  onCapture={(dataUrl) => {
+                    setCapturedPhoto(dataUrl);
+                    updateUserAvatar(dataUrl);
+                  }}
                   capturedImage={capturedPhoto}
                   onRetake={() => setCapturedPhoto(null)}
                   siteName={selectedSite.name}
@@ -389,12 +396,39 @@ export const WorkerMobileView: React.FC = () => {
                 </span>
               </div>
 
-              <div className="w-20 h-20 rounded-full border-4 border-blue-600 mx-auto overflow-hidden shadow-md">
-                <img
-                  src={currentUser?.avatar || 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80'}
-                  alt={workerName}
-                  className="w-full h-full object-cover"
-                />
+              <div className="relative w-24 h-24 mx-auto">
+                <div className="w-24 h-24 rounded-full border-4 border-blue-600 overflow-hidden shadow-md">
+                  <img
+                    src={currentUser?.avatar || capturedPhoto || 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80'}
+                    alt={workerName}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <label 
+                  className="absolute bottom-0 right-0 p-2 rounded-full bg-blue-600 hover:bg-blue-500 text-white cursor-pointer shadow-lg border-2 border-slate-900 transition-transform active:scale-95 flex items-center justify-center"
+                  title="Update profile photo"
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const dataUrl = event.target?.result as string;
+                        if (dataUrl) {
+                          setCapturedPhoto(dataUrl);
+                          updateUserAvatar(dataUrl);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  <CameraIcon className="w-3.5 h-3.5" />
+                </label>
               </div>
 
               <div>

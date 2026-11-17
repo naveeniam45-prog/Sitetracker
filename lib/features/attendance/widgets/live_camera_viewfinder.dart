@@ -10,6 +10,8 @@ class LiveCameraViewfinder extends StatefulWidget {
   final double siteLat;
   final double siteLng;
   final VoidCallback? onPhotoSnapped;
+  final ValueChanged<Uint8List?>? onPhotoBytesCaptured;
+  final Uint8List? initialPhotoBytes;
 
   const LiveCameraViewfinder({
     super.key,
@@ -17,6 +19,8 @@ class LiveCameraViewfinder extends StatefulWidget {
     this.siteLat = 10.0159,
     this.siteLng = 76.3638,
     this.onPhotoSnapped,
+    this.onPhotoBytesCaptured,
+    this.initialPhotoBytes,
   });
 
   @override
@@ -38,8 +42,11 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
   @override
   void initState() {
     super.initState();
+    _snappedBytes = widget.initialPhotoBytes;
     WidgetsBinding.instance.addObserver(this);
-    _initializeCamera();
+    if (_snappedBytes == null) {
+      _initializeCamera();
+    }
     _fetchLiveLocation();
   }
 
@@ -149,6 +156,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
           _isCapturing = false;
         });
         widget.onPhotoSnapped?.call();
+        widget.onPhotoBytesCaptured?.call(bytes);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -175,6 +183,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
           _isCapturing = false;
         });
         widget.onPhotoSnapped?.call();
+        widget.onPhotoBytesCaptured?.call(bytes);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -197,6 +206,7 @@ class _LiveCameraViewfinderState extends State<LiveCameraViewfinder> with Widget
     setState(() {
       _snappedBytes = null;
     });
+    widget.onPhotoBytesCaptured?.call(null);
     _fetchLiveLocation();
     _initializeCamera();
   }

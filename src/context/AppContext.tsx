@@ -14,6 +14,7 @@ interface AppContextType {
   login: (username: string, role?: string) => boolean;
   logout: () => void;
   switchUser: (userId: string) => void;
+  updateUserAvatar: (avatarDataUrl: string) => void;
   
   // App navigation
   activeAdminTab: ActiveAdminTab;
@@ -256,6 +257,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(null);
   };
 
+  const updateUserAvatar = (avatarDataUrl: string) => {
+    if (!avatarDataUrl) return;
+    setCurrentUser(prev => prev ? { ...prev, avatar: avatarDataUrl } : prev);
+    if (currentUser?.id) {
+      setWorkers(prev => prev.map(w => w.id === currentUser.id ? { ...w, avatar: avatarDataUrl } : w));
+    }
+  };
+
   const switchUser = (userId: string) => {
     const found = DEMO_USERS.find(u => u.id === userId);
     if (found) {
@@ -439,6 +448,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notes: `Location detected at ${site?.name || 'Kochi Project'}`
     };
 
+    // Update avatar with captured photo
+    if (photoDataUrl) {
+      setCurrentUser(prev => prev ? { ...prev, avatar: photoDataUrl } : prev);
+      setWorkers(prev => prev.map(w => w.id === workerId ? { ...w, avatar: photoDataUrl } : w));
+    }
+
     setAttendanceRecords(prev => [newRecord, ...prev]);
 
     // Update worker status
@@ -548,6 +563,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       login,
       logout,
       switchUser,
+      updateUserAvatar,
       activeAdminTab,
       setActiveAdminTab,
       selectedToolId,

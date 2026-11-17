@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/routing/route_names.dart';
 import '../../../core/widgets/sitetrack_logo.dart';
 import '../../../shared/providers/app_state_provider.dart';
+import '../../../core/services/camera_helper.dart';
 import '../widgets/live_camera_viewfinder.dart';
 
 class WorkerCheckInScreen extends StatefulWidget {
@@ -19,6 +21,7 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
   late String _selectedSiteId;
   Timer? _timer;
   int _currentBottomNavIndex = 0; // 0: Home, 1: Profile
+  Uint8List? _capturedPhotoBytes;
 
   @override
   void initState() {
@@ -390,6 +393,13 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
             locationAddress: site.location,
             siteLat: site.latitude ?? 10.0159,
             siteLng: site.longitude ?? 76.3638,
+            initialPhotoBytes: _capturedPhotoBytes ?? provider.workerPhotoBytes,
+            onPhotoBytesCaptured: (bytes) {
+              setState(() {
+                _capturedPhotoBytes = bytes;
+              });
+              provider.updateWorkerPhoto(bytes);
+            },
           ),
 
           const SizedBox(height: 14),
@@ -438,6 +448,7 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                   provider.checkInWorker(
                     workerId: workerId,
                     siteId: site.id,
+                    photoBytes: _capturedPhotoBytes,
                   );
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -700,25 +711,69 @@ class _WorkerCheckInScreenState extends State<WorkerCheckInScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Worker Avatar
-                Container(
-                  width: 86,
-                  height: 86,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primaryLight, width: 3),
-                  ),
-                  child: ClipOval(
-                    child: Image.network(
-                      user?.avatarUrl ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80',
-                      fit: BoxFit.cover,
-                      errorBuilder: (ctx, err, stack) => Icon(
-                        Icons.person,
-                        size: 48,
-                        color: textMuted,
+                // Worker Avatar (Updated Live with Captured Worksite Photo)
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primaryLight, width: 3),
+                      ),
+                      child: ClipOval(
+                        child: (provider.workerPhotoBytes != null)
+                            ? Image.memory(
+                                provider.workerPhotoBytes!,
+                                fit: BoxFit.cover,
+                              )
+                            : (_capturedPhotoBytes != null
+                                ? Image.memory(
+                                    _capturedPhotoBytes!,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.network(
+                                    user?.avatarUrl ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (ctx, err, stack) => Icon(
+                                      Icons.person,
+                                      size: 48,
+                                      color: textMuted,
+                                    ),
+                                  )),
                       ),
                     ),
-                  ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: InkWell(
+                        onTap: () async {
+                          final bytes = await captureWorksitePhoto();
+                          if (bytes != null) {
+                            setState(() {
+                              _capturedPhotoBytes = bytes;
+                            });
+                            provider.updateWorkerPhoto(bytes);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: cardBg, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 14),
 
